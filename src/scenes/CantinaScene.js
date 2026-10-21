@@ -4,13 +4,45 @@ import { needsPassScreen } from '../app/gameStore.js';
 import { getPreference } from '../app/preferences.js';
 import { PHASES, canSeeDice } from '../engine/rules.js';
 import { KEYS, preloadCantina } from './shared/assets.js';
-import { getLayout } from './shared/layout.js';
-import { drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
-import { COLORS } from './shared/theme.js';
+import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
+import { COLORS, OUTLINE_WIDTH } from './shared/theme.js';
 
-const DEPTHS = { background: -30, dim: -20, shadow: -12, character: -10, table: 0, dice: 10, cup: 20 };
+// Escenario principal: cantina nocturna cusqueña.
+// Dibuja únicamente dentro de la zona `scene` que publica src/app/stage.js; lo que queda
+// fuera del marco es zona muerta (el mismo fondo, desenfocado y apagado).
 
-// Escenario principal: cantina nocturna cusqueña
+const DEPTHS = {
+  backdrop: -60, // fondo de la ventana completa
+  backdropDim: -50,
+  background: -40, // fondo recortado a la zona de la escena
+  sceneDim: -30,
+  shadow: -20,
+  character: -10, // detrás de la mesa: ella le tapa la cintura
+  table: 0,
+  dice: 10,
+  cup: 20,
+  edge: 30,
+};
+
+// Fuera del marco no pasa nada, así que el fondo se apaga casi por completo
+const BACKDROP_DIM = 0.8;
+// Oscurecido del escenario: suave en partida (para leer el HUD), fuerte en el menú (para el logo)
+const DIM = { game: 0.32, menu: 0.66 };
+// Parte del personaje que asoma por encima del borde lejano de la mesa
+const CHARACTER_ABOVE_TABLE = 0.56;
+// Ancho del personaje respecto al ancho de la mesa: queda siempre a escala con ella
+const CHARACTER_WIDTH = 0.52;
+// Si no cabe ni esto (pantalla baja con ocho tarjetas), es mejor no dibujarlo que dejar un muñequito
+const CHARACTER_MIN_HEIGHT = 96;
+
+// Rectángulo agrandado un porcentaje por cada lado
+const bleed = (area, ratio) => ({
+  x: area.x - area.width * ratio,
+  y: area.y - area.height * ratio,
+  width: area.width * (1 + ratio * 2),
+  height: area.height * (1 + ratio * 2),
+});
+
 export class CantinaScene extends Phaser.Scene {
   constructor() {
     super('CantinaScene');
@@ -22,83 +54,111 @@ export class CantinaScene extends Phaser.Scene {
 
   create() {
     this.store = this.registry.get('store');
+    this.stage = this.registry.get('stage');
+    const hasBackground = this.textures.exists(KEYS.cantinaBackground);
 
     // Respaldo vectorial por si el fondo ilustrado no está disponible
-    this.fallback = this.add.graphics().setDepth(DEPTHS.background);
-    this.background = this.textures.exists(KEYS.cantinaBackground)
-      ? this.add.image(0, 0, KEYS.cantinaBackground).setOrigin(0.5).setDepth(DEPTHS.background)
-      : null;
-    // Oscurece el fondo para que la interfaz y la mesa se lean bien
-    this.dim = this.add.rectangle(0, 0, 10, 10, COLORS.fondo).setOrigin(0).setDepth(DEPTHS.dim);
-    // Penumbra de los costados cuando la ventana es más ancha que el escenario
-    this.letterbox = this.add.graphics().setDepth(DEPTHS.dim);
+    this.fallback = this.add.graphics().setDepth(DEPTHS.backdrop);
 
-    this.characterShadow = this.add.graphics().setDepth(DEPTHS.shadow);
-    this.character = this.add.image(0, 0).setOrigin(0.5, 1).setVisible(false).setDepth(DEPTHS.character);
-    this.table = this.add.graphics().setDepth(DEPTHS.table);
-    this.cup = this.add.container().setDepth(DEPTHS.cup);
+    // Zona muerta: el mismo fondo cubriendo toda la ventana, desenfocado y oscurecido
+    this.backdrop = hasBackground
+      ? this.add.image(0, 0, KEYS.cantinaBackground).setDepth(DEPTHS.backdrop)
+      : null;
+    this.blurBackdrop();
+    this.backdropDim = this.add.graphics().setDepth(DEPTHS.backdropDim);
+
+    // Todo lo del escenario se recorta a su zona: nada se derrama sobre el HUD
+    this.maskShape = this.make.graphics({ add: false });
+    const mask = this.maskShape.createGeometryMask();
+
+    this.background = hasBackground
+      ? this.add.image(0, 0, KEYS.cantinaBackground).setDepth(DEPTHS.background).setMask(mask)
+      : null;
+    this.sceneDim = this.add.graphics().setDepth(DEPTHS.sceneDim);
+    this.edge = this.add.graphics().setDepth(DEPTHS.edge);
+
+    this.characterShadow = this.add.graphics().setDepth(DEPTHS.shadow).setMask(mask);
+    this.character = this.add
+      .image(0, 0)
+      .setOrigin(0.5, 1)
+      .setVisible(false)
+      .setDepth(DEPTHS.character)
+      .setMask(mask);
+    this.table = this.add.graphics().setDepth(DEPTHS.table).setMask(mask);
     this.cupGraphics = this.add.graphics();
-    this.cup.add(this.cupGraphics);
+    this.cup = this.add.container(0, 0, [this.cupGraphics]).setDepth(DEPTHS.cup);
     this.dice = [this.add.graphics().setDepth(DEPTHS.dice), this.add.graphics().setDepth(DEPTHS.dice)];
     this.lastPhase = null;
 
-    this.layoutScene();
-    this.scale.on('resize', this.layoutScene, this);
+    // Las medidas salen del stage, nunca de la ventana: él avisa al suscribirse y en cada cambio
+    const unsubscribeStage = this.stage.subscribe((layout) => this.useLayout(layout));
+    // El alto de la ventana (la zona muerta) sí depende del canvas
+    this.scale.on('resize', this.redraw, this);
     const unsubscribe = this.store.subscribe((snapshot) => this.sync(snapshot));
     this.events.once('shutdown', () => {
-      this.scale.off('resize', this.layoutScene, this);
+      this.scale.off('resize', this.redraw, this);
+      unsubscribeStage();
       unsubscribe();
+      // La forma de la máscara no está en la lista de dibujo: hay que soltarla a mano
+      mask.destroy();
+      this.maskShape.destroy();
     });
   }
 
-  // Recalcula todo con las medidas actuales (al iniciar y en cada resize)
-  layoutScene() {
+  // El desenfoque de la zona muerta solo existe en WebGL; en Canvas queda solo oscurecida
+  blurBackdrop() {
+    if (!this.backdrop) return;
+    try {
+      this.backdrop.postFX.addBlur(0, 2, 2, 2);
+    } catch {
+      /* sin WebGL no hay postFX: basta con el oscurecido */
+    }
+  }
+
+  useLayout(layout) {
+    if (!layout) return;
+    this.layout = layout;
+    this.redraw();
+  }
+
+  // Recalcula todo con las zonas actuales (al iniciar, en cada resize y al cambiar de layout)
+  redraw() {
+    // El stage manda: nunca está más atrasado que la última copia guardada
+    const layout = this.stage?.get() ?? this.layout;
+    if (!layout) return;
+    this.layout = layout;
+    this.area = layout.scene;
+
     const { width, height } = this.scale.gameSize;
-    const { table, stage } = getLayout(width, height);
-    this.area = table;
+    // Un poco más grande que la ventana: el desenfoque difumina los bordes y así no se ven
+    if (this.backdrop) coverImage(this.backdrop, bleed({ x: 0, y: 0, width, height }, 0.04));
+    else drawSunburst(this.fallback.clear(), width, height);
 
-    if (this.background) {
-      // Recorte tipo "cover" dentro del escenario, anclado abajo: el piso queda siempre
-      // a la misma altura que la mesa, en vez de subir y bajar según la pantalla
-      const texture = this.textures.get(KEYS.cantinaBackground).getSourceImage();
-      const scale = Math.max(stage.width / texture.width, stage.height / texture.height);
-      this.background.setOrigin(0.5, 1).setPosition(stage.x + stage.width / 2, stage.height).setScale(scale);
-    } else {
-      drawSunburst(this.fallback.clear(), width, height);
-    }
-    this.dim.setPosition(stage.x, 0).setSize(stage.width, height);
+    // Recorte "cover" dentro de la zona, anclado abajo: el piso del cuadro cae donde se apoya la mesa
+    this.maskShape.clear().fillStyle(0xffffff).fillRect(this.area.x, this.area.y, this.area.width, this.area.height);
+    if (this.background) coverImage(this.background, this.area, { anchorY: 1 });
 
-    // Costados fuera del escenario
-    const bars = this.letterbox.clear();
-    if (stage.x > 0) {
-      bars.fillStyle(COLORS.fondo, 1);
-      bars.fillRect(0, 0, stage.x, height);
-      bars.fillRect(stage.x + stage.width, 0, stage.x + 1, height);
-    }
-
-    this.felt = drawRoundTable(this.table.clear(), table);
-
-    const cupHeight = Math.min(this.felt.height * 1.05, this.felt.width * 0.26);
-    drawCup(this.cupGraphics.clear(), cupHeight * 0.85, cupHeight);
-    this.cupHeight = cupHeight;
-    this.dieSize = cupHeight * 0.45;
-    // Tapado al centro de la mesa; destapado se corre a un lado, sin taparle la cara a nadie
-    this.cupRest = { x: this.felt.x, y: this.felt.y + this.felt.height * 0.12 };
-    this.cupAside = { x: this.felt.x + this.felt.width * 0.26, y: this.cupRest.y - this.felt.height * 0.08 };
-
+    this.measureProps(this.area);
     this.sync(this.store.get(), { animate: false });
   }
 
+  // Mesa, cubilete y dados: todas las medidas salen de la zona de la escena (shared/props.js),
+  // así el cubilete nunca se sale del paño por mucho que cambie la pantalla.
+  measureProps(area) {
+    this.props = drawRoundTable(this.table.clear(), area);
+    drawCup(this.cupGraphics.clear(), this.props.cup.width, this.props.cup.height);
+  }
+
   sync(snapshot, { animate = true } = {}) {
+    if (!this.area) return;
     const { game, viewerId } = snapshot;
     const inGame = Boolean(game);
     // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
     this.tweens.killTweensOf(this.cup);
+    this.paintOverlays(inGame);
     this.table.setVisible(inGame);
     this.cup.setVisible(inGame);
     this.dice.forEach((d) => d.setVisible(false));
-    // El menú se ve más oscuro que la mesa, para que el logo resalte
-    this.dim.setFillStyle(COLORS.fondo, inGame ? 0.35 : 0.72);
     this.showCharacter(game);
 
     if (!inGame) {
@@ -110,7 +170,7 @@ export class CantinaScene extends Phaser.Scene {
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
     this.lastPhase = game.phase;
 
-    this.cup.setPosition(this.cupRest.x, this.cupRest.y).setAngle(0);
+    this.cup.setPosition(this.props.cup.rest.x, this.props.cup.rest.y).setAngle(0);
     this.drawDice(game.round.dice);
 
     if (animate && justRolled) {
@@ -120,7 +180,7 @@ export class CantinaScene extends Phaser.Scene {
           { angle: { from: -10, to: 10 }, duration: 90, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' },
           { angle: 0, duration: 60 },
           {
-            ...this.cupAside,
+            ...this.props.cup.aside,
             angle: -14,
             duration: 320,
             ease: 'Back.easeOut',
@@ -134,10 +194,36 @@ export class CantinaScene extends Phaser.Scene {
     this.dice.forEach((d) => d.setVisible(showDice));
     if (!showDice) return;
     if (animate) {
-      this.tweens.add({ targets: this.cup, ...this.cupAside, angle: -14, duration: 320, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: this.cup, ...this.props.cup.aside, angle: -14, duration: 320, ease: 'Back.easeOut' });
     } else {
-      this.cup.setPosition(this.cupAside.x, this.cupAside.y).setAngle(-14);
+      this.cup.setPosition(this.props.cup.aside.x, this.props.cup.aside.y).setAngle(-14);
     }
+  }
+
+  // Oscurecido de las dos capas. En partida se apaga lo que rodea al escenario y el escenario
+  // solo un poco; en el menú se apaga toda la ventana, que es el telón del logo.
+  paintOverlays(inGame) {
+    const { width, height } = this.scale.gameSize;
+    const { x, y, width: w, height: h } = this.area;
+    const dim = this.backdropDim.clear();
+    this.sceneDim.clear();
+    this.edge.clear();
+    this.background?.setVisible(inGame);
+
+    if (!inGame) {
+      dim.fillStyle(COLORS.fondo, DIM.menu).fillRect(0, 0, width, height);
+      return;
+    }
+
+    // Cuatro bandas alrededor de la zona: dentro va la copia nítida del fondo
+    dim.fillStyle(COLORS.fondo, BACKDROP_DIM);
+    dim.fillRect(0, 0, width, y);
+    dim.fillRect(0, y + h, width, height - y - h);
+    dim.fillRect(0, y, x, h);
+    dim.fillRect(x + w, y, width - x - w, h);
+
+    this.sceneDim.fillStyle(COLORS.fondo, DIM.game).fillRect(x, y, w, h);
+    this.edge.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeRect(x, y, w, h);
   }
 
   // Los dados se redibujan siempre que haya tirada, nunca solo se ocultan:
@@ -147,13 +233,12 @@ export class CantinaScene extends Phaser.Scene {
       this.dice.forEach((d) => d.clear());
       return;
     }
-    const gap = this.dieSize * 0.75;
+    const { size, x, y } = this.props.dice;
+    const gap = size * 0.75;
     dice.forEach((value, i) => {
       const die = this.dice[i];
-      drawDie(die.clear(), this.dieSize, value);
-      die
-        .setPosition(this.felt.x - this.felt.width * 0.1 + (i === 0 ? -gap : gap), this.cupRest.y + this.dieSize * 0.1)
-        .setAngle(i === 0 ? -8 : 10);
+      drawDie(die.clear(), size, value);
+      die.setPosition(x + (i === 0 ? -gap : gap), y).setAngle(i === 0 ? -8 : 10);
     });
   }
 
@@ -165,27 +250,38 @@ export class CantinaScene extends Phaser.Scene {
     this.dice.forEach((d) => d.setVisible(visible));
   }
 
-  // Muestra al jugador en turno sentado al otro lado de la mesa.
+  // Muestra al jugador en turno sentado al otro lado de la mesa, centrado sobre ella.
   // Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
   showCharacter(game) {
     const index = this.characterSlot(game);
     const key = index >= 0 ? portraitKey(characterIndexFor(index)) : null;
-    if (!key || !this.textures.exists(key)) {
+    if (!key || !this.textures.exists(key) || !this.props) {
       this.hideCharacter();
       return;
     }
 
+    const table = this.props;
     const texture = this.textures.get(key).getSourceImage();
-    // Cabe entre el techo del área de juego y el borde lejano de la mesa
-    const feet = this.felt.y - this.felt.height * 0.1;
-    const scale = Math.min((feet - this.area.y) / texture.height, (this.area.width * 0.45) / texture.width);
-    // A un costado, para que el cubilete nunca le tape la cara
-    const x = this.felt.x - this.felt.width * 0.24;
-    this.character.setTexture(key).setScale(scale).setPosition(x, feet).setVisible(true);
+    // Cabe entre el borde útil de la escena (debajo de las tarjetas en celular) y la mesa,
+    // y no es más ancho que ella: la cabeza nunca sube más de lo permitido
+    const headroom = Math.max(table.top - this.area.contentTop, 0);
+    const scale = Math.min(
+      (table.width * CHARACTER_WIDTH) / texture.width,
+      headroom / CHARACTER_ABOVE_TABLE / texture.height,
+    );
+    const height = texture.height * scale;
+    if (height < CHARACTER_MIN_HEIGHT) {
+      this.hideCharacter();
+      return;
+    }
+
+    // Los pies quedan debajo del canto de la mesa: solo asoma de la cintura hacia arriba
+    const feet = table.top + height * (1 - CHARACTER_ABOVE_TABLE);
+    this.character.setTexture(key).setScale(scale).setPosition(table.x, feet).setVisible(true);
 
     // Sombra a sus pies, para que se apoye en el piso en vez de flotar
     const shadowWidth = texture.width * scale * 0.7;
-    drawSoftShadow(this.characterShadow.clear(), x, feet, shadowWidth, shadowWidth * 0.26, { alpha: 0.5 });
+    drawSoftShadow(this.characterShadow.clear(), table.x, feet, shadowWidth, shadowWidth * 0.26, { alpha: 0.5 });
 
     // Preferencia del jugador: en sombra se ve solo la silueta, sin revelar el detalle del personaje
     if (getPreference('silhouettes')) this.character.setTintFill(COLORS.borde);

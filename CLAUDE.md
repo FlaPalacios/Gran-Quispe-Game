@@ -80,10 +80,15 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 - **Wireframe de referencia:** `recursos-fv/referencias/Gran Quispe-wiireframe.png` (menú principal, mesa de juego, configuración). Es una **referencia de estilo, no una especificación exacta**: se toma la dirección de arte (fondo de rayos de sol ámbar y naranja, mesa con marco de madera tipo retablo, banderines, tarjetas crema con contorno negro, botones grandes rojo y azul, letras QUISPE en las tarjetas de jugador), pero los modos, variantes y textos del juego son los de este archivo.
 - Lo que en el wireframe **no aplica** porque viene de otro juego de dados: modos "Rápido / Torneo", variantes "Ases comodín / Calzar / Apuesta ciega" y la jugada cantada "3 cuatros" (en Quispe se canta un número, por ejemplo "42").
 - **Responsivo obligatorio:** debe verse bien tanto en celular (angosto, vertical) como en PC (más ancho, horizontal). No basta con escalar la versión de celular con franjas a los costados.
-  - **Celular** (menos de 1024 px de ancho o pantalla vertical): una columna como en el wireframe. Mesa arriba, panel "Tu turno", tarjetas de jugadores (hasta 8, en dos filas de 4) y botones abajo.
-  - **PC** (1024 px o más, en horizontal): mesa grande a la izquierda y una columna derecha con panel de turno, jugadores y botones. Menú y configuración en dos columnas, con ancho máximo para que no se estiren de más.
-  - El breakpoint vive en `src/scenes/shared/layout.js` (`DESKTOP_MIN_WIDTH`) y en la media query de `src/ui/styles.css`. Mantener ambos sincronizados.
-  - Phaser corre en modo `RESIZE`: el canvas ocupa toda la ventana y cada escena se redibuja en el evento `resize`.
+  - **Celular** (menos de 1024 px de ancho o pantalla vertical): una columna. Escena arriba con las tarjetas de jugador superpuestas debajo de la barra, y la zona de juego abajo con su propio panel de madera.
+  - **PC** (1024 px o más, en horizontal): marco centrado de 1440 px como máximo y proporción 16:10, con los costados mostrando el fondo desenfocado. Escena a la izquierda y columna derecha con tarjetas arriba y zona de juego debajo.
+  - Phaser corre en modo `RESIZE`: el canvas ocupa toda la ventana, pero **cada escena dibuja dentro del rectángulo de su zona**, no contra la ventana.
+
+**Zonas de la pantalla de partida.** `getLayout(width, height, { insets, playerCount })` de `src/scenes/shared/layout.js` es la única fuente de verdad de la geometría. Devuelve `frame` (el marco; fuera no hay nada interactivo), `topBar`, `scene` (fondo, mesa, cubilete y personaje), `players` y `play`, cada una `{x, y, width, height}` en píxeles de ventana. `scene.contentTop` marca el borde superior útil dentro de la escena: en celular queda por debajo de las tarjetas superpuestas.
+
+`src/app/stage.js` la llama y reparte el resultado a las dos capas: la escena se suscribe con `stage.subscribe(fn)` y el HUD en HTML lee las variables CSS `--zona-<zona>-x/y/w/h` que publica, más `data-modo="pc" | "celular"` en `:root`. **El CSS no recalcula geometría**, así que no hay dos copias de las medidas que mantener a mano. Las zonas respetan `env(safe-area-inset-*)`, medidas en `src/app/safeArea.js`.
+
+El alto de fila de las tarjetas que reserva `getLayout` tiene que seguir alcanzando para el contenido real de `.player` en `src/ui/styles.css` (avatar, nombre y las 6 letras), incluido su borde de 3 px. Si se cambia una, hay que comprobar la otra en el navegador.
 
 ## Estructura de carpetas
 
@@ -101,9 +106,12 @@ src/
     bots.js            # personalidades de bots (Fase 4)
   app/                 # puente motor ↔ vista
     gameStore.js       # estado, azar real, guardado, suscripciones
+    stage.js           # zonas de la pantalla: las publica como variables CSS y avisa a la escena
+    safeArea.js        # mide las zonas seguras del teléfono
     audio.js           # efectos de sonido y silencio
     gameSounds.js      # qué suena en cada cambio de fase
     characters.js      # qué personaje le toca a cada jugador
+    preferences.js     # silencio y siluetas, guardados entre partidas
   scenes/              # CantinaScene, BarScene, AndinoScene
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
   dev/                 # galería de assets (solo desarrollo)
@@ -225,9 +233,7 @@ Un escenario placeholder, local en un solo celular, con pantalla de pase.
 - [x] Adelantado de la Fase 3: variantes Quispe vale más, Destapar en Cholada y Reloj de presión, con sus interruptores en el panel
 
 Pendientes menores detectados:
-- Con 8 jugadores en celulares bajos, la segunda fila de tarjetas necesita desplazarse.
-- En iPhone con muesca, la barra superior no reserva la zona segura en el cálculo de la mesa.
-- Texto crema sobre rojo (etiqueta "Juego de dados", letras perdidas) queda en 4,48:1 de contraste, apenas bajo 4,5.
+- Texto crema sobre rojo (letras perdidas) queda en 4,48:1 de contraste, apenas bajo 4,5.
 
 ### Fase 2: Arte y sonido de la cantina (completada el 2026-10-21, 73 tests, probada en navegador a 390 px y 1536 px, revisada por `code-reviewer`)
 

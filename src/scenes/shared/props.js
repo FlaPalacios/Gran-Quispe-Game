@@ -26,14 +26,64 @@ export function drawSoftShadow(g, x, y, width, height, { alpha = 0.45, steps = 7
   }
 }
 
-// Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
-// Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
-// Devuelve el centro y tamaño del paño, donde van el cubilete y los dados.
-export function drawRoundTable(g, area) {
+// Escala una imagen para cubrir un rectángulo sin deformarla (como `background-size: cover`).
+// `anchorY: 1` la ancla abajo: útil cuando el piso del cuadro debe caer donde se apoya la mesa.
+export function coverImage(image, area, { anchorX = 0.5, anchorY = 0.5 } = {}) {
+  const scale = Math.max(area.width / image.width, area.height / image.height);
+  return image
+    .setOrigin(anchorX, anchorY)
+    .setScale(scale)
+    .setPosition(area.x + area.width * anchorX, area.y + area.height * anchorY);
+}
+
+// Medidas de la mesa redonda apoyada en la parte baja de un área, centrada en ella.
+// Cálculo puro y aparte del dibujo para que la escena coloque personaje, cubilete y dados
+// en proporción a la mesa sin repetir estos números.
+function roundTableGeometry(area) {
   const width = area.width * 0.9;
   const height = Math.min(area.height * 0.42, width * 0.46);
-  const cx = area.x + area.width / 2;
-  const cy = area.y + area.height - height * 0.52;
+  const x = area.x + area.width / 2;
+  const y = area.y + area.height - height * 0.52;
+  return {
+    x,
+    y,
+    width,
+    height,
+    // Borde lejano del canto: por encima de esta línea asoma quien está sentado detrás
+    top: y - height / 2,
+    felt: { x, y, width: width * 0.84, height: height * 0.72 },
+  };
+}
+
+// Mesa redonda y todo lo que se apoya en ella, medido solo con el área que recibe.
+// Al salir todo del paño, el cubilete y los dados no pueden quedar fuera de la mesa
+// en ninguna pantalla (lo comprueba props.test.js).
+export function tableProps(area) {
+  const table = roundTableGeometry(area);
+  const { felt } = table;
+
+  // Tapado al centro del paño; destapado se corre a un lado, siempre sobre el paño
+  const rest = { x: felt.x, y: felt.y + felt.height * 0.14 };
+  const aside = { x: felt.x + felt.width * 0.27, y: felt.y + felt.height * 0.05 };
+
+  // El último tope del alto es el canto lejano de la mesa: así el cubilete no asoma por
+  // detrás ni se le cruza por delante a quien está sentado al otro lado
+  const height = Math.min(felt.height * 0.95, felt.width * 0.26, (rest.y - table.top) * 0.95);
+
+  return {
+    ...table,
+    cup: { width: height * 0.85, height, rest, aside },
+    // Los dados caen al lado opuesto, donde el cubilete ya no los tapa
+    dice: { size: height * 0.42, x: felt.x - felt.width * 0.16, y: felt.y + felt.height * 0.18 },
+  };
+}
+
+// Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
+// Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
+// Devuelve las medidas de tableProps: el paño, el canto lejano y dónde van cubilete y dados.
+export function drawRoundTable(g, area) {
+  const table = tableProps(area);
+  const { x: cx, y: cy, width, height, felt } = table;
 
   // Sombra en el piso, corrida hacia abajo: es lo que impide que la mesa parezca flotar
   drawSoftShadow(g, cx, cy + height * 0.3, width * 0.95, height * 0.55);
@@ -43,14 +93,13 @@ export function drawRoundTable(g, area) {
   g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(cx, cy, width, height);
 
   // Paño
-  const felt = { x: cx, y: cy, width: width * 0.84, height: height * 0.72 };
   g.fillStyle(COLORS.retabloAzul).fillEllipse(felt.x, felt.y, felt.width, felt.height);
   g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(felt.x, felt.y, felt.width, felt.height);
 
   // Hilo dorado del borde del paño; crece con la mesa para no desaparecer en pantallas grandes
   const thread = Math.max(2, Math.round(felt.width / 220));
   g.lineStyle(thread, COLORS.retabloDorado, 0.7).strokeEllipse(felt.x, felt.y, felt.width * 0.9, felt.height * 0.86);
-  return felt;
+  return table;
 }
 
 // Marco de madera tipo retablo con remaches dorados y paño azul. Devuelve el centro del paño.

@@ -22,12 +22,13 @@ export function stopClock() {
 export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
+  // Tres zonas independientes: cada una se coloca con las medidas de src/app/stage.js
   return h(
     'div',
     { class: 'hud' },
     h(
       'div',
-      { class: 'hud__top' },
+      { class: 'zona hud__top' },
       h('span', { class: 'pill' }, t('game.round', { n: game.round.number, mode: modeName(game.config.mode) })),
       h(
         'span',
@@ -37,11 +38,15 @@ export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onM
       ),
     ),
     h(
+      'div',
+      { class: 'zona hud__players' },
+      h('div', { class: 'players' }, game.players.map((p, i) => playerCard(game, p, i))),
+    ),
+    h(
       'section',
-      { class: 'hud__panel' },
+      { class: 'zona hud__play' },
       turnCard(snapshot, current, store),
       actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }),
-      h('div', { class: 'players' }, game.players.map((p, i) => playerCard(game, p, i))),
     ),
   );
 }

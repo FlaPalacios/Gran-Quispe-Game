@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { preloadSfx } from './app/audio.js';
 import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
+import { createStage } from './app/stage.js';
 import { CantinaScene } from './scenes/CantinaScene.js';
 import { BarScene } from './scenes/BarScene.js';
 import { AndinoScene } from './scenes/AndinoScene.js';
@@ -9,6 +10,8 @@ import { COLORS, FONTS, toCss } from './scenes/shared/theme.js';
 import { mountApp } from './ui/app.js';
 
 const store = createGameStore();
+// Calcula las zonas de la pantalla y las publica como variables CSS para el HUD
+const stage = createStage(store);
 connectGameSounds(store);
 mountApp(document.getElementById('ui'), store);
 
@@ -28,8 +31,8 @@ const config = {
   },
   scene: [CantinaScene, BarScene, AndinoScene],
   callbacks: {
-    // Las escenas leen el estado del juego desde el registro
-    preBoot: (game) => game.registry.set('store', store),
+    // Las escenas leen el estado del juego y las zonas desde el registro
+    preBoot: (game) => game.registry.set({ store, stage }),
   },
 };
 

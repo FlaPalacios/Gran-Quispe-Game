@@ -21,17 +21,18 @@ La referencia visual es el wireframe hecho en Claude Design: `recursos-fv/refere
 - **El menú ya no dibuja el título con tipografía**, sino el logo: `src/assets/images/shared/logo.webp`.
 - El escenario se oscurece con una capa de `--color-fondo`: al 72 % en el menú (para que resalte el logo) y al 35 % en la mesa (para que se lea el HUD).
 
-## El escenario tiene un ancho máximo
+## El escenario vive dentro de un marco
 
-En monitores anchos el escenario no se estira de lado a lado: queda en una caja centrada y los costados van en negro (`--color-fondo`). El límite es doble: 1500 px, y como mucho 1,8 veces el alto, para no recortar de más el fondo, que es cuadrado. Vive en `MAX_STAGE_WIDTH` y `MAX_STAGE_RATIO` de `src/scenes/shared/layout.js` y en `--escenario-ancho` de `src/ui/styles.css`; hay que mantenerlos sincronizados.
+La pantalla de partida se divide en zonas (`frame`, `topBar`, `scene`, `players`, `play`) que calcula `getLayout()` en `src/scenes/shared/layout.js`. En PC el marco va centrado, con 1440 px de ancho como máximo y proporción 16:10; fuera de él, a los costados, se ve el mismo fondo oscurecido y desenfocado, sin nada interactivo.
 
-El fondo se recorta tipo "cover" dentro de esa caja y **se ancla abajo**, no al centro: así el piso queda siempre a la misma altura que la mesa en vez de subir y bajar según la pantalla.
+La escena dibuja **dentro del rectángulo de su zona**, no contra la ventana: el fondo se recorta tipo "cover" ajustado a esa zona, anclado abajo (así el piso queda siempre a la misma altura que la mesa) y recortado con una máscara para no salirse.
 
 ## Composición de la mesa
 
-De atrás hacia adelante: fondo del escenario → capa de oscurecido → personaje del jugador en turno → mesa → dados → cubilete.
+De atrás hacia adelante: fondo desenfocado de los costados → fondo del escenario → capa de oscurecido → personaje del jugador en turno → mesa → dados → cubilete.
 
-- El personaje se ve de la cintura para arriba, sentado al otro lado de la mesa y corrido hacia un lado, para que el cubilete nunca le tape la cara. Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
+- La mesa se apoya en la parte de abajo de la zona de la escena, centrada, y su tamaño sale del ancho y alto de esa zona.
+- El personaje se ve de la cintura para arriba, centrado detrás de la mesa, que le tapa la cintura. Su cabeza nunca sube por encima de `scene.contentTop`, así que no invade las tarjetas ni la barra. Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó. Si no queda alto suficiente (pantalla baja con 8 jugadores), se oculta en vez de salir aplastado.
 - Al destapar, el cubilete **no se levanta en alto**: se corre a un costado de la mesa y se inclina. Así no invade el resto de la escena.
 - La mesa y el personaje llevan **sombra difusa** a sus pies (`drawSoftShadow`). Sin ella parecen flotar sobre el fondo, que es lo primero que delata que son dos piezas distintas.
 
