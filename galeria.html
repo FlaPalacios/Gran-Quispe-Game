@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Galería de assets</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+    <style>
+      html,
+      body {
+        overflow: auto;
+        height: auto;
+      }
+      body {
+        padding: 16px;
+        color: var(--color-fondo);
+        background: var(--color-texto);
+        --preview-bg: repeating-conic-gradient(from 0deg, var(--color-acento) 0 15deg, var(--color-foco) 15deg 30deg);
+      }
+      body[data-bg='crema'] {
+        --preview-bg: var(--color-texto);
+      }
+      body[data-bg='noche'] {
+        --preview-bg: var(--color-fondo);
+      }
+      h1,
+      h2 {
+        font-family: var(--font-display);
+        font-weight: 900;
+        margin: 1rem 0 0.5rem;
+      }
+      .summary button {
+        margin-left: 0.5rem;
+        min-height: 36px;
+        font: inherit;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1rem;
+      }
+      .card {
+        display: grid;
+        gap: 0.5rem;
+        align-content: start;
+      }
+      .card header {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .card code {
+        font-size: 0.75rem;
+        overflow-wrap: anywhere;
+      }
+      .badge {
+        padding: 0.1rem 0.6rem;
+        border: 2px solid var(--color-borde);
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+      .ok .badge {
+        background: var(--color-retablo-azul);
+        color: var(--color-texto);
+      }
+      .missing .badge {
+        background: var(--color-retablo-rojo);
+        color: var(--color-texto);
+      }
+      .optional .badge {
+        background: var(--color-papel);
+      }
+      .preview {
+        display: grid;
+        place-items: center;
+        height: 220px;
+        border: 2px solid var(--color-borde);
+        border-radius: 12px;
+        background: var(--preview-bg);
+        overflow: hidden;
+      }
+      .preview img {
+        max-width: 100%;
+        max-height: 100%;
+      }
+      .preview.empty {
+        background: var(--color-papel);
+        font-size: 2rem;
+      }
+      .meta,
+      .dims {
+        font-size: 0.85rem;
+      }
+      audio {
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="/src/dev/gallery.js"></script>
+  </body>
+</html>
