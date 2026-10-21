@@ -10,6 +10,13 @@ const SIZES = [
   [1536, 864],
   [1920, 1080],
   [2560, 1080],
+  // Teléfono en horizontal: ancho y muy bajo
+  [844, 390],
+  [667, 375],
+  [915, 412],
+  // Ventanas apretadas de escritorio (consola abierta abajo, pantalla partida)
+  [1024, 400],
+  [1280, 300],
 ];
 const PLAYER_COUNTS = [2, 4, 8];
 
@@ -109,6 +116,42 @@ describe('getLayout', () => {
       expect(bottom(layout.frame)).toBe(844 - 34);
       expect(layout.topBar.y).toBeGreaterThanOrEqual(47);
       expect(bottom(layout.play)).toBeLessThanOrEqual(844 - 34);
+    });
+  });
+
+
+  describe('casos extremos', () => {
+    it('una ventana tan baja que no cabe nada sigue dando zonas válidas dentro del marco', () => {
+      for (const [w, h] of [[1024, 160], [390, 200], [300, 120]]) {
+        const l = getLayout(w, h, { playerCount: 8 });
+        for (const [name, zone] of Object.entries({ topBar: l.topBar, scene: l.scene, players: l.players, play: l.play })) {
+          expect(zone.height, `${name} en ${w}x${h}`).toBeGreaterThan(0);
+          expect(zone.width, `${name} en ${w}x${h}`).toBeGreaterThan(0);
+          expect(zone.y, `${name} en ${w}x${h}`).toBeGreaterThanOrEqual(l.frame.y - 1);
+        }
+        expect(bottom(l.scene), `escena en ${w}x${h}`).toBeGreaterThan(l.scene.y);
+      }
+    });
+
+    it('el teléfono en horizontal usa la distribución de dos columnas', () => {
+      expect(getLayout(844, 390).isDesktop).toBe(true);
+      expect(getLayout(667, 375).isDesktop).toBe(true);
+      expect(getLayout(390, 844).isDesktop).toBe(false);
+    });
+
+    it('las tarjetas se reparten en columnas según el ancho, no en un número fijo', () => {
+      // Ancho de sobra: los 8 caben en una fila
+      expect(getLayout(844, 390, { playerCount: 8 }).players.columns).toBeGreaterThanOrEqual(2);
+      // Celular angosto: cuatro por fila
+      const narrow = getLayout(390, 844, { playerCount: 8 });
+      expect(narrow.players.columns).toBe(4);
+      expect(narrow.players.columns * 2).toBeGreaterThanOrEqual(8);
+    });
+
+    it('con pocos jugadores no se reservan filas de más', () => {
+      const two = getLayout(390, 844, { playerCount: 2 });
+      expect(two.players.columns).toBe(2);
+      expect(two.players.height).toBeLessThan(120);
     });
   });
 

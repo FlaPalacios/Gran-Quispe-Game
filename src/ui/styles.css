@@ -497,6 +497,7 @@ p {
   --y: var(--zona-players-y);
   --w: var(--zona-players-w);
   --h: var(--zona-players-h);
+  overflow-y: auto;
 }
 
 .hud__play {
@@ -508,12 +509,13 @@ p {
   flex-direction: column;
   justify-content: center;
   gap: 0.6rem;
+  overflow-y: auto;
 }
 
 /* En celular la zona de juego lleva su propio panel de madera: el fondo de la cantina
    termina donde termina la escena */
 :root[data-modo='celular'] .hud__play {
-  padding: 0.75rem var(--gutter) max(12px, env(safe-area-inset-bottom));
+  padding: 0.75rem var(--gutter) 12px;
   background-color: var(--color-tabla);
   background-image: repeating-linear-gradient(
     90deg,
@@ -627,10 +629,11 @@ p {
 
 .players {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 1fr;
-  gap: 0.5rem;
-  height: 100%;
+  grid-template-columns: repeat(var(--zona-players-columnas, 4), minmax(0, 1fr));
+  /* Alto fijo por fila: si no caben todas, la zona se desplaza en vez de aplastarlas */
+  grid-auto-rows: var(--zona-players-fila, 76px);
+  gap: var(--zona-players-gap, 8px);
+  align-content: start;
 }
 
 /* Compacta a propósito: su alto debe caber en el que reserva getLayout() para cada fila */
@@ -741,7 +744,7 @@ p {
   overflow-y: auto;
   display: grid;
   gap: 0.75rem;
-  padding: 1rem 16px max(16px, env(safe-area-inset-bottom));
+  padding: 1rem 16px 16px;
   background: var(--color-texto);
   color: var(--color-fondo);
   border: var(--borde-grueso) solid var(--color-borde);
@@ -780,20 +783,43 @@ p {
    La geometría de las zonas la pone src/app/stage.js; aquí solo cambia lo que no es
    posición: tamaños de letra y la distribución interna de menú y configuración.
    El atributo data-modo lo escribe el mismo módulo, con el breakpoint de layout.js. */
-:root[data-modo='pc'] .turn-card__title {
+:root[data-juego='amplia'] .turn-card__title {
   font-size: 1.8rem;
 }
 
-:root[data-modo='pc'] .player__avatar {
+/* Zona de juego baja (teléfono en horizontal): todo encoge para que el botón no se salga */
+:root[data-juego='compacta'] .turn-card {
+  padding: 0.5rem 0.75rem;
+}
+
+:root[data-juego='compacta'] .turn-card__title {
+  font-size: 1.1rem;
+}
+
+:root[data-juego='compacta'] .turn-card__text,
+:root[data-juego='compacta'] .result__subtitle {
+  font-size: 0.82rem;
+}
+
+:root[data-juego='compacta'] .btn--big {
+  min-height: 48px;
+  font-size: 1.2rem;
+}
+
+:root[data-juego='compacta'] .result__title {
+  font-size: 1.4rem;
+}
+
+:root[data-tarjetas='amplia'] .player__avatar {
   width: 40px;
   height: 40px;
 }
 
-:root[data-modo='pc'] .player__name {
+:root[data-tarjetas='amplia'] .player__name {
   font-size: 0.9rem;
 }
 
-:root[data-modo='pc'] .letter {
+:root[data-tarjetas='amplia'] .letter {
   height: 16px;
   font-size: 0.68rem;
 }
@@ -802,34 +828,32 @@ p {
   justify-content: flex-start;
 }
 
-@media (min-width: 1024px) and (orientation: landscape) {
-  .menu {
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 8vw;
-  }
+:root[data-modo='pc'] .menu {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 8vw;
+}
 
-  .logo {
-    width: min(44%, 620px);
-    margin: 0;
-  }
+:root[data-modo='pc'] .logo {
+  width: min(44%, 620px);
+  margin: 0;
+}
 
-  .menu__actions {
-    margin: 0;
-  }
+:root[data-modo='pc'] .menu__actions {
+  margin: 0;
+}
 
-  .setup__body {
-    grid-template-columns: 1fr 1fr;
-  }
+:root[data-modo='pc'] .setup__body {
+  grid-template-columns: 1fr 1fr;
+}
 
-  .names {
-    grid-template-columns: repeat(4, 1fr);
-  }
+:root[data-modo='pc'] .names {
+  grid-template-columns: repeat(4, 1fr);
+}
 
-  .sheet {
-    align-self: center;
-    border-bottom: var(--borde-grueso) solid var(--color-borde);
-    border-radius: 24px;
-  }
+:root[data-modo='pc'] .sheet {
+  align-self: center;
+  border-bottom: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 24px;
 }

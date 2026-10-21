@@ -92,11 +92,8 @@ export class CantinaScene extends Phaser.Scene {
 
     // Las medidas salen del stage, nunca de la ventana: él avisa al suscribirse y en cada cambio
     const unsubscribeStage = this.stage.subscribe((layout) => this.useLayout(layout));
-    // El alto de la ventana (la zona muerta) sí depende del canvas
-    this.scale.on('resize', this.redraw, this);
     const unsubscribe = this.store.subscribe((snapshot) => this.sync(snapshot));
     this.events.once('shutdown', () => {
-      this.scale.off('resize', this.redraw, this);
       unsubscribeStage();
       unsubscribe();
       // La forma de la máscara no está en la lista de dibujo: hay que soltarla a mano
@@ -129,7 +126,7 @@ export class CantinaScene extends Phaser.Scene {
     this.layout = layout;
     this.area = layout.scene;
 
-    const { width, height } = this.scale.gameSize;
+    const { width, height } = layout.viewport;
     // Un poco más grande que la ventana: el desenfoque difumina los bordes y así no se ven
     if (this.backdrop) coverImage(this.backdrop, bleed({ x: 0, y: 0, width, height }, 0.04));
     else drawSunburst(this.fallback.clear(), width, height);
@@ -171,7 +168,9 @@ export class CantinaScene extends Phaser.Scene {
     this.lastPhase = game.phase;
 
     this.cup.setPosition(this.props.cup.rest.x, this.props.cup.rest.y).setAngle(0);
-    this.drawDice(game.round.dice);
+    // Los valores solo se dibujan si este jugador puede verlos: así la jugada real
+    // no queda pintada en el canvas durante la pantalla de pase ni mientras otro decide
+    this.drawDice(showDice ? game.round.dice : null);
 
     if (animate && justRolled) {
       this.tweens.chain({
@@ -203,7 +202,7 @@ export class CantinaScene extends Phaser.Scene {
   // Oscurecido de las dos capas. En partida se apaga lo que rodea al escenario y el escenario
   // solo un poco; en el menú se apaga toda la ventana, que es el telón del logo.
   paintOverlays(inGame) {
-    const { width, height } = this.scale.gameSize;
+    const { width, height } = this.layout.viewport;
     const { x, y, width: w, height: h } = this.area;
     const dim = this.backdropDim.clear();
     this.sceneDim.clear();
