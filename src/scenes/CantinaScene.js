@@ -5,10 +5,10 @@ import { getPreference } from '../app/preferences.js';
 import { PHASES, canSeeDice } from '../engine/rules.js';
 import { KEYS, preloadCantina } from './shared/assets.js';
 import { getLayout } from './shared/layout.js';
-import { drawCup, drawDie, drawRoundTable, drawSunburst } from './shared/props.js';
+import { drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
 import { COLORS } from './shared/theme.js';
 
-const DEPTHS = { background: -30, dim: -20, character: -10, table: 0, dice: 10, cup: 20 };
+const DEPTHS = { background: -30, dim: -20, shadow: -12, character: -10, table: 0, dice: 10, cup: 20 };
 
 // Escenario principal: cantina nocturna cusqueña
 export class CantinaScene extends Phaser.Scene {
@@ -30,7 +30,10 @@ export class CantinaScene extends Phaser.Scene {
       : null;
     // Oscurece el fondo para que la interfaz y la mesa se lean bien
     this.dim = this.add.rectangle(0, 0, 10, 10, COLORS.fondo).setOrigin(0).setDepth(DEPTHS.dim);
+    // Penumbra de los costados cuando la ventana es más ancha que el escenario
+    this.letterbox = this.add.graphics().setDepth(DEPTHS.dim);
 
+    this.characterShadow = this.add.graphics().setDepth(DEPTHS.shadow);
     this.character = this.add.image(0, 0).setOrigin(0.5, 1).setVisible(false).setDepth(DEPTHS.character);
     this.table = this.add.graphics().setDepth(DEPTHS.table);
     this.cup = this.add.container().setDepth(DEPTHS.cup);
@@ -51,18 +54,27 @@ export class CantinaScene extends Phaser.Scene {
   // Recalcula todo con las medidas actuales (al iniciar y en cada resize)
   layoutScene() {
     const { width, height } = this.scale.gameSize;
-    const { table } = getLayout(width, height);
+    const { table, stage } = getLayout(width, height);
     this.area = table;
 
     if (this.background) {
-      // Recorte tipo "cover": llena la pantalla sin deformarse
+      // Recorte tipo "cover" dentro del escenario, anclado abajo: el piso queda siempre
+      // a la misma altura que la mesa, en vez de subir y bajar según la pantalla
       const texture = this.textures.get(KEYS.cantinaBackground).getSourceImage();
-      const scale = Math.max(width / texture.width, height / texture.height);
-      this.background.setPosition(width / 2, height / 2).setScale(scale);
+      const scale = Math.max(stage.width / texture.width, stage.height / texture.height);
+      this.background.setOrigin(0.5, 1).setPosition(stage.x + stage.width / 2, stage.height).setScale(scale);
     } else {
       drawSunburst(this.fallback.clear(), width, height);
     }
-    this.dim.setSize(width, height);
+    this.dim.setPosition(stage.x, 0).setSize(stage.width, height);
+
+    // Costados fuera del escenario
+    const bars = this.letterbox.clear();
+    if (stage.x > 0) {
+      bars.fillStyle(COLORS.fondo, 1);
+      bars.fillRect(0, 0, stage.x, height);
+      bars.fillRect(stage.x + stage.width, 0, stage.x + 1, height);
+    }
 
     this.felt = drawRoundTable(this.table.clear(), table);
 
@@ -159,7 +171,7 @@ export class CantinaScene extends Phaser.Scene {
     const index = this.characterSlot(game);
     const key = index >= 0 ? portraitKey(characterIndexFor(index)) : null;
     if (!key || !this.textures.exists(key)) {
-      this.character.setVisible(false);
+      this.hideCharacter();
       return;
     }
 
@@ -167,16 +179,22 @@ export class CantinaScene extends Phaser.Scene {
     // Cabe entre el techo del área de juego y el borde lejano de la mesa
     const feet = this.felt.y - this.felt.height * 0.1;
     const scale = Math.min((feet - this.area.y) / texture.height, (this.area.width * 0.45) / texture.width);
-    this.character
-      .setTexture(key)
-      .setScale(scale)
-      // A un costado, para que el cubilete nunca le tape la cara
-      .setPosition(this.felt.x - this.felt.width * 0.24, feet)
-      .setVisible(true);
+    // A un costado, para que el cubilete nunca le tape la cara
+    const x = this.felt.x - this.felt.width * 0.24;
+    this.character.setTexture(key).setScale(scale).setPosition(x, feet).setVisible(true);
+
+    // Sombra a sus pies, para que se apoye en el piso en vez de flotar
+    const shadowWidth = texture.width * scale * 0.7;
+    drawSoftShadow(this.characterShadow.clear(), x, feet, shadowWidth, shadowWidth * 0.26, { alpha: 0.5 });
 
     // Preferencia del jugador: en sombra se ve solo la silueta, sin revelar el detalle del personaje
     if (getPreference('silhouettes')) this.character.setTintFill(COLORS.borde);
     else this.character.clearTint();
+  }
+
+  hideCharacter() {
+    this.character.setVisible(false);
+    this.characterShadow.clear();
   }
 
   characterSlot(game) {

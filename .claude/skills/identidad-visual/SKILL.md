@@ -21,12 +21,19 @@ La referencia visual es el wireframe hecho en Claude Design: `recursos-fv/refere
 - **El menú ya no dibuja el título con tipografía**, sino el logo: `src/assets/images/shared/logo.webp`.
 - El escenario se oscurece con una capa de `--color-fondo`: al 72 % en el menú (para que resalte el logo) y al 35 % en la mesa (para que se lea el HUD).
 
+## El escenario tiene un ancho máximo
+
+En monitores anchos el escenario no se estira de lado a lado: queda en una caja centrada y los costados van en negro (`--color-fondo`). El límite es doble: 1500 px, y como mucho 1,8 veces el alto, para no recortar de más el fondo, que es cuadrado. Vive en `MAX_STAGE_WIDTH` y `MAX_STAGE_RATIO` de `src/scenes/shared/layout.js` y en `--escenario-ancho` de `src/ui/styles.css`; hay que mantenerlos sincronizados.
+
+El fondo se recorta tipo "cover" dentro de esa caja y **se ancla abajo**, no al centro: así el piso queda siempre a la misma altura que la mesa en vez de subir y bajar según la pantalla.
+
 ## Composición de la mesa
 
 De atrás hacia adelante: fondo del escenario → capa de oscurecido → personaje del jugador en turno → mesa → dados → cubilete.
 
 - El personaje se ve de la cintura para arriba, sentado al otro lado de la mesa y corrido hacia un lado, para que el cubilete nunca le tape la cara. Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
 - Al destapar, el cubilete **no se levanta en alto**: se corre a un costado de la mesa y se inclina. Así no invade el resto de la escena.
+- La mesa y el personaje llevan **sombra difusa** a sus pies (`drawSoftShadow`). Sin ella parecen flotar sobre el fondo, que es lo primero que delata que son dos piezas distintas.
 
 ## Responsivo
 
@@ -46,7 +53,19 @@ Cada pantalla tiene dos distribuciones: celular (una columna, como el wireframe)
 | Marco retablo, franja 2 (azul colonial) | `--color-retablo-azul` | #2f5d9e | `0x2f5d9e` |
 | Marco retablo, detalle (dorado opaco) | `--color-retablo-dorado` | #f2c230 | `0xf2c230` |
 | Letras QUISPE pendientes (gris oscuro) | `--color-letra-pendiente` | #4a3a2f | `0x4a3a2f` |
-| Campos y controles sobre tarjetas crema (blanco) | `--color-papel` | #ffffff | — |
+| Campos sobre tarjetas crema del HUD (blanco) | `--color-papel` | #ffffff | — |
+
+**Maderas de cantina** (desde el 2026-10-21). Las pantallas fuera de la mesa (configuración, y más adelante el menú) van oscuras y sobrias, a tono con el escenario, en vez del crema claro:
+
+| Rol | Variable CSS | Hex |
+| --- | --- | --- |
+| Fondo de pantalla, tablones oscuros | `--color-tabla` | #1d1410 |
+| Veta de los tablones | `--color-tabla-veta` | #2a1d16 |
+| Tarjetas | `--color-panel` | #35241a |
+| Campos y controles dentro de una tarjeta | `--color-campo` | #4a3326 |
+| Texto secundario sobre madera | `--color-texto-suave` | #c7ab8c |
+
+Sobre madera, el texto principal va en crema (`--color-texto`) y la opción elegida en ámbar (`--color-foco`) con texto oscuro.
 
 Las variables CSS están definidas en `src/ui/styles.css`. En la capa HTML se usan siempre las variables, nunca el hex directo.
 

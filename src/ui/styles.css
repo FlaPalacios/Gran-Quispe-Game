@@ -10,7 +10,14 @@
   --color-retablo-azul: #2f5d9e;
   --color-retablo-dorado: #f2c230;
   --color-letra-pendiente: #4a3a2f;
-  --color-papel: #ffffff; /* fondo de campos y controles sobre tarjetas crema */
+  --color-papel: #ffffff; /* fondo de campos sobre tarjetas crema (HUD de la mesa) */
+
+  /* Maderas de cantina: pantallas sobrias, con la luz cálida del escenario */
+  --color-tabla: #1d1410; /* fondo de pantalla, tablones oscuros */
+  --color-tabla-veta: #2a1d16; /* veta de los tablones */
+  --color-panel: #35241a; /* tarjetas */
+  --color-campo: #4a3326; /* campos y controles dentro de una tarjeta */
+  --color-texto-suave: #c7ab8c; /* texto secundario sobre madera */
 
   /* Cambiar solo --font-display (y FONTS.display en src/scenes/shared/theme.js) para probar otra fuente de títulos.
      Fraunces se carga en peso 900 con el eje SOFT al máximo (index.html) */
@@ -22,7 +29,10 @@
   --radio: 18px;
   --tactil-min: 44px;
 
-  /* Debe coincidir con getLayout() de src/scenes/shared/layout.js */
+  /* Deben coincidir con getLayout() de src/scenes/shared/layout.js */
+  --escenario-ancho: min(1500px, max(100vh * 1.8, 1024px));
+  /* Margen izquierdo del escenario cuando la ventana es más ancha que él */
+  --escenario-margen: max(0px, calc((100vw - var(--escenario-ancho)) / 2));
   --gutter: 4vw;
   --mesa-arriba: max(9%, 60px);
   --mesa-alto: 42%;
@@ -152,9 +162,10 @@ p {
 
 /* ---------- Piezas comunes ---------- */
 
+/* Tarjetas de la configuración: madera sobre los tablones del fondo */
 .card {
-  background: var(--color-texto);
-  color: var(--color-fondo);
+  background: var(--color-panel);
+  color: var(--color-texto);
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: var(--radio);
   box-shadow: var(--sombra-solida);
@@ -199,9 +210,13 @@ p {
   padding: 0.5rem 0.75rem;
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: 12px;
-  background: var(--color-papel);
-  color: var(--color-fondo);
+  background: var(--color-campo);
+  color: var(--color-texto);
   font: inherit;
+}
+
+.input::placeholder {
+  color: var(--color-texto-suave);
 }
 
 .screen {
@@ -245,8 +260,16 @@ p {
 
 .setup {
   padding: 0;
-  background: var(--color-texto);
-  color: var(--color-fondo);
+  /* Tablones verticales: dos vetas apenas visibles sobre la madera oscura */
+  background-color: var(--color-tabla);
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 46px,
+    var(--color-tabla-veta) 46px 48px,
+    transparent 48px 94px,
+    var(--color-tabla-veta) 94px 95px
+  );
+  color: var(--color-texto);
   display: flex;
   flex-direction: column;
 }
@@ -259,7 +282,7 @@ p {
   align-items: center;
   gap: 0.75rem;
   padding: max(12px, env(safe-area-inset-top)) 16px 12px;
-  background: var(--color-acento);
+  background: var(--color-madera);
   border-bottom: var(--borde-grueso) solid var(--color-borde);
 }
 
@@ -284,7 +307,8 @@ p {
   position: sticky;
   bottom: 0;
   padding: 12px 16px max(12px, env(safe-area-inset-bottom));
-  background: var(--color-texto);
+  background: var(--color-tabla);
+  border-top: 2px solid var(--color-borde);
   display: grid;
   justify-items: center;
 }
@@ -306,8 +330,8 @@ p {
   padding: 0.4rem;
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: 14px;
-  background: var(--color-papel);
-  color: var(--color-fondo);
+  background: var(--color-campo);
+  color: var(--color-texto);
   font: inherit;
   cursor: pointer;
   box-shadow: 0 3px 0 var(--color-borde);
@@ -318,7 +342,8 @@ p {
 }
 
 .segmented__option.is-selected {
-  background: var(--color-acento);
+  background: var(--color-foco);
+  color: var(--color-fondo);
 }
 
 .stepper {
@@ -345,7 +370,7 @@ p {
   display: grid;
   gap: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 2px dashed rgba(0, 0, 0, 0.2);
+  border-top: 2px dashed rgba(244, 234, 215, 0.2);
 }
 
 .variant:first-of-type {
@@ -368,7 +393,7 @@ p {
 
 .variant__text small {
   font-size: 0.85rem;
-  color: var(--color-letra-pendiente);
+  color: var(--color-texto-suave);
 }
 
 .variant__param {
@@ -385,7 +410,7 @@ p {
   margin: 0;
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: 999px;
-  background: var(--color-papel);
+  background: var(--color-campo);
   position: relative;
   cursor: pointer;
 }
@@ -719,14 +744,14 @@ p {
    Mantener sincronizado con DESKTOP_MIN_WIDTH de src/scenes/shared/layout.js */
 @media (min-width: 1024px) and (orientation: landscape) {
   :root {
-    --panel-ancho: clamp(360px, 36vw, 520px);
+    --panel-ancho: clamp(360px, calc(min(100vw, var(--escenario-ancho)) * 0.36), 520px);
     --margen-pc: 32px;
   }
 
   .hud__top,
   .hud__panel {
     left: auto;
-    right: var(--margen-pc);
+    right: calc(var(--escenario-margen) + var(--margen-pc));
     width: var(--panel-ancho);
   }
 

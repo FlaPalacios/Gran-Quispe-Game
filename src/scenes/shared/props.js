@@ -16,6 +16,16 @@ export function drawSunburst(g, width, height) {
   }
 }
 
+// Sombra difusa: varias elipses concéntricas, porque Graphics no tiene desenfoque.
+// Sirve para asentar la mesa y los personajes en el piso en vez de dejarlos flotando.
+export function drawSoftShadow(g, x, y, width, height, { alpha = 0.45, steps = 7 } = {}) {
+  for (let i = steps; i >= 1; i--) {
+    const spread = 0.6 + (i / steps) * 0.65;
+    g.fillStyle(COLORS.borde, alpha / steps);
+    g.fillEllipse(x, y, width * spread, height * spread);
+  }
+}
+
 // Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
 // Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
 // Devuelve el centro y tamaño del paño, donde van el cubilete y los dados.
@@ -24,6 +34,9 @@ export function drawRoundTable(g, area) {
   const height = Math.min(area.height * 0.42, width * 0.46);
   const cx = area.x + area.width / 2;
   const cy = area.y + area.height - height * 0.52;
+
+  // Sombra en el piso, corrida hacia abajo: es lo que impide que la mesa parezca flotar
+  drawSoftShadow(g, cx, cy + height * 0.3, width * 0.95, height * 0.55);
 
   // Canto de madera
   g.fillStyle(COLORS.madera).fillEllipse(cx, cy, width, height);
