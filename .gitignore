@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Carpeta personal: Claude y git la ignoran
+recursos-fv/ignorar/
+
+# Configuración local de Claude Code
+.claude/settings.local.json

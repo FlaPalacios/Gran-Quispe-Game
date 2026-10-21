@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./recursos-fv/ignorar/**)",
+      "Edit(./recursos-fv/ignorar/**)",
+      "Write(./recursos-fv/ignorar/**)"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "gran-quispe",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Gran Quispe: el juego de dados y faroleo cusqueño como aplicación web",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

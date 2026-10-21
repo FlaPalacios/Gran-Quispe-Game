@@ -1,0 +1,786 @@
+/* Tokens de identidad visual. Fuente única de verdad: skill identidad-visual */
+:root {
+  --color-fondo: #120d0a;
+  --color-madera: #6b3f24;
+  --color-foco: #ffc46e;
+  --color-acento: #f2a33a;
+  --color-texto: #f4ead7;
+  --color-borde: #000000;
+  --color-retablo-rojo: #c23a2b;
+  --color-retablo-azul: #2f5d9e;
+  --color-retablo-dorado: #f2c230;
+  --color-letra-pendiente: #4a3a2f;
+  --color-papel: #ffffff; /* fondo de campos y controles sobre tarjetas crema */
+
+  /* Cambiar solo --font-display (y FONTS.display en src/scenes/shared/theme.js) para probar otra fuente de títulos.
+     Fraunces se carga en peso 900 con el eje SOFT al máximo (index.html) */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-ui: 'Fredoka', system-ui, sans-serif;
+
+  --borde-grueso: 3px;
+  --sombra-solida: 0 4px 0 var(--color-borde);
+  --radio: 18px;
+  --tactil-min: 44px;
+
+  /* Debe coincidir con getLayout() de src/scenes/shared/layout.js */
+  --gutter: 4vw;
+  --mesa-arriba: max(9%, 60px);
+  --mesa-alto: 44%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  /* Mismo naranja del fondo de rayos, para que no se vea negro mientras carga Phaser */
+  background: var(--color-acento);
+  color: var(--color-texto);
+  font-family: var(--font-ui);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* el canvas queda visible; cada pantalla reactiva sus eventos */
+}
+
+#ui > * {
+  pointer-events: auto;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+/* Visible solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Botones ---------- */
+
+.btn {
+  min-height: var(--tactil-min);
+  min-width: var(--tactil-min);
+  padding: 0.5rem 1.1rem;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 80ms, box-shadow 80ms;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--color-borde);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn:focus-visible,
+.input:focus-visible,
+.switch:focus-visible {
+  outline: 3px solid var(--color-retablo-azul);
+  outline-offset: 2px;
+}
+
+.btn--primary {
+  background: var(--color-retablo-rojo);
+  color: var(--color-texto);
+}
+
+.btn--secondary {
+  background: var(--color-retablo-azul);
+  color: var(--color-texto);
+}
+
+.btn--light {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+.btn--accent {
+  background: var(--color-acento);
+  color: var(--color-fondo);
+}
+
+.btn--big {
+  min-height: 60px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.6rem;
+}
+
+.btn--small {
+  min-height: var(--tactil-min);
+  padding: 0.25rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+.btn--icon {
+  width: var(--tactil-min);
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* ---------- Piezas comunes ---------- */
+
+.card {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.card__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.25rem;
+}
+
+.pill {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 999px;
+  padding: 0.35rem 1rem;
+  font-weight: 600;
+  box-shadow: var(--sombra-solida);
+}
+
+.tag {
+  display: inline-block;
+  background: var(--color-retablo-rojo);
+  color: var(--color-texto);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transform: rotate(-4deg);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tactil-min);
+  padding: 0.5rem 0.75rem;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 12px;
+  background: var(--color-papel);
+  color: var(--color-fondo);
+  font: inherit;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+}
+
+/* ---------- Menú principal ---------- */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.menu__brand {
+  margin-top: 8vh;
+  text-align: center;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: var(--font-display);
+  font-weight: 900;
+  line-height: 0.9;
+  color: var(--color-texto);
+  -webkit-text-stroke: 10px var(--color-borde);
+  paint-order: stroke fill;
+}
+
+.logo__small {
+  font-size: clamp(2.5rem, 12vw, 4.5rem);
+}
+
+.logo__big {
+  font-size: clamp(4rem, 22vw, 9rem);
+}
+
+.menu__actions {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 4vh;
+}
+
+/* ---------- Configuración ---------- */
+
+.setup {
+  padding: 0;
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  display: flex;
+  flex-direction: column;
+}
+
+.setup__header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  background: var(--color-acento);
+  border-bottom: var(--borde-grueso) solid var(--color-borde);
+}
+
+.setup__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.8rem;
+}
+
+.setup__body {
+  display: grid;
+  gap: 1rem;
+  padding: 16px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  align-content: start;
+  flex: 1;
+}
+
+.setup__footer {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  background: var(--color-texto);
+  display: grid;
+  justify-items: center;
+}
+
+.setup__footer .btn {
+  width: min(100%, 480px);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.segmented__option {
+  display: grid;
+  gap: 2px;
+  min-height: 56px;
+  padding: 0.4rem;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 14px;
+  background: var(--color-papel);
+  color: var(--color-fondo);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--color-borde);
+}
+
+.segmented__option small {
+  font-size: 0.75rem;
+}
+
+.segmented__option.is-selected {
+  background: var(--color-acento);
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stepper__value {
+  min-width: 2ch;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.8rem;
+}
+
+.names {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.variant {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 2px dashed rgba(0, 0, 0, 0.2);
+}
+
+.variant:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.variant__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.variant__text {
+  display: grid;
+  gap: 2px;
+}
+
+.variant__text small {
+  font-size: 0.85rem;
+  color: var(--color-letra-pendiente);
+}
+
+.variant__param {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.switch {
+  appearance: none;
+  flex: none;
+  width: 60px;
+  height: 34px;
+  margin: 0;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 999px;
+  background: var(--color-papel);
+  position: relative;
+  cursor: pointer;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 50%;
+  background: var(--color-texto);
+  transition: transform 120ms;
+}
+
+.switch:checked {
+  background: var(--color-retablo-azul);
+}
+
+.switch:checked::after {
+  transform: translateX(26px);
+}
+
+/* ---------- Pásale el celular ---------- */
+
+.pass {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 24px;
+  text-align: center;
+  background: var(--color-fondo); /* opaco: no debe verse nada de la mesa */
+}
+
+.pass__title {
+  font-size: 1.2rem;
+}
+
+.pass__name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2.5rem, 12vw, 4.5rem);
+  color: var(--color-acento);
+  overflow-wrap: anywhere;
+}
+
+.pass__hint {
+  color: var(--color-foco);
+  margin-bottom: 1.5rem;
+}
+
+.pass .btn {
+  width: min(100%, 420px);
+}
+
+/* ---------- HUD de la partida (celular: debajo de la mesa) ---------- */
+
+.hud__top {
+  position: absolute;
+  top: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  height: var(--mesa-arriba);
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: env(safe-area-inset-top);
+}
+
+.hud__panel {
+  position: absolute;
+  top: calc(var(--mesa-arriba) + var(--mesa-alto));
+  bottom: 0;
+  left: var(--gutter);
+  right: var(--gutter);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 0 max(12px, env(safe-area-inset-bottom));
+}
+
+.turn-card {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+  padding: 0.75rem 1rem;
+  text-align: center;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.turn-card__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+}
+
+.call-chip {
+  display: inline-block;
+  background: var(--color-retablo-dorado);
+  border: 2px solid var(--color-borde);
+  border-radius: 999px;
+  padding: 0.1rem 0.8rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.result__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 2rem;
+  color: var(--color-retablo-azul);
+}
+
+.result--cholada .result__title {
+  color: var(--color-retablo-rojo);
+  font-size: 2.4rem;
+}
+
+.result__subtitle {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: -0.25rem;
+}
+
+/* 1.2rem en negrita cuenta como texto grande: el rojo sobre crema cumple el contraste */
+.result__penalty {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--color-retablo-rojo);
+}
+
+.result__winner {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.6rem;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.timer__track {
+  flex: 1;
+  height: 12px;
+  border: 2px solid var(--color-borde);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-papel);
+}
+
+.timer__bar {
+  display: block;
+  height: 100%;
+  background: var(--color-retablo-rojo);
+}
+
+.timer__label {
+  min-width: 3.5ch;
+  font-weight: 700;
+}
+
+.actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.actions--two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.actions--two .btn--big {
+  padding-inline: 0.5rem;
+  font-size: 1.35rem;
+  white-space: nowrap;
+}
+
+.players {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.player {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.2rem;
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 var(--color-borde);
+  min-width: 0;
+}
+
+.player.is-turn {
+  background: var(--color-foco);
+}
+
+/* Eliminado: borde punteado y nombre tachado en vez de transparencia, para no perder contraste */
+.player.is-out {
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.player.is-out .player__name {
+  text-decoration: line-through;
+}
+
+.player__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--color-borde);
+  border-radius: 50%;
+  background: var(--color-acento);
+  font-weight: 700;
+}
+
+.player__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.player__lives,
+.player__out {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.letters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.letter {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-letra-pendiente);
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-letra-pendiente);
+}
+
+.letter.is-lost {
+  background: var(--color-retablo-rojo);
+  border-color: var(--color-borde);
+  color: var(--color-texto);
+}
+
+/* ---------- Hoja para elegir la jugada ---------- */
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(18, 13, 10, 0.6);
+}
+
+.sheet {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 16px max(16px, env(safe-area-inset-bottom));
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+}
+
+.sheet__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.call-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.call-option {
+  padding: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.call-option--quispe {
+  grid-column: 1 / -1;
+  background: var(--color-retablo-dorado);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.4rem;
+}
+
+/* ---------- PC: desde 1024px en horizontal ----------
+   Mantener sincronizado con DESKTOP_MIN_WIDTH de src/scenes/shared/layout.js */
+@media (min-width: 1024px) and (orientation: landscape) {
+  :root {
+    --panel-ancho: clamp(360px, 36vw, 520px);
+    --margen-pc: 32px;
+  }
+
+  .hud__top,
+  .hud__panel {
+    left: auto;
+    right: var(--margen-pc);
+    width: var(--panel-ancho);
+  }
+
+  .hud__top {
+    top: var(--margen-pc);
+    height: auto;
+    min-height: 0;
+  }
+
+  .hud__panel {
+    top: calc(var(--margen-pc) + 64px);
+    bottom: var(--margen-pc);
+    justify-content: safe center;
+    padding-bottom: 0;
+  }
+
+  .turn-card__title {
+    font-size: 1.8rem;
+  }
+
+  .player__avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 8vw;
+  }
+
+  .menu__brand,
+  .menu__actions {
+    margin: 0;
+  }
+
+  .setup__body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .names {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .sheet {
+    align-self: center;
+    border-bottom: var(--borde-grueso) solid var(--color-borde);
+    border-radius: 24px;
+  }
+}
