@@ -1,24 +1,42 @@
 import Phaser from 'phaser';
+import { characterIndexFor, portraitKey } from '../app/characters.js';
 import { needsPassScreen } from '../app/gameStore.js';
+import { getPreference } from '../app/preferences.js';
 import { PHASES, canSeeDice } from '../engine/rules.js';
+import { KEYS, preloadCantina } from './shared/assets.js';
 import { getLayout } from './shared/layout.js';
-import { drawCup, drawDie, drawSunburst, drawTable } from './shared/props.js';
+import { drawCup, drawDie, drawRoundTable, drawSunburst } from './shared/props.js';
+import { COLORS } from './shared/theme.js';
 
-// Escenario principal: cantina nocturna cusqueña (único con personajes).
-// Placeholder vectorial hasta la Fase 2 (arte y sonido de la cantina).
+const DEPTHS = { background: -30, dim: -20, character: -10, table: 0, dice: 10, cup: 20 };
+
+// Escenario principal: cantina nocturna cusqueña
 export class CantinaScene extends Phaser.Scene {
   constructor() {
     super('CantinaScene');
   }
 
+  preload() {
+    preloadCantina(this);
+  }
+
   create() {
     this.store = this.registry.get('store');
-    this.background = this.add.graphics();
-    this.table = this.add.graphics(); // aparte del fondo para ocultarla en el menú
-    this.cup = this.add.container();
+
+    // Respaldo vectorial por si el fondo ilustrado no está disponible
+    this.fallback = this.add.graphics().setDepth(DEPTHS.background);
+    this.background = this.textures.exists(KEYS.cantinaBackground)
+      ? this.add.image(0, 0, KEYS.cantinaBackground).setOrigin(0.5).setDepth(DEPTHS.background)
+      : null;
+    // Oscurece el fondo para que la interfaz y la mesa se lean bien
+    this.dim = this.add.rectangle(0, 0, 10, 10, COLORS.fondo).setOrigin(0).setDepth(DEPTHS.dim);
+
+    this.character = this.add.image(0, 0).setOrigin(0.5, 1).setVisible(false).setDepth(DEPTHS.character);
+    this.table = this.add.graphics().setDepth(DEPTHS.table);
+    this.cup = this.add.container().setDepth(DEPTHS.cup);
     this.cupGraphics = this.add.graphics();
     this.cup.add(this.cupGraphics);
-    this.dice = [this.add.graphics(), this.add.graphics()];
+    this.dice = [this.add.graphics().setDepth(DEPTHS.dice), this.add.graphics().setDepth(DEPTHS.dice)];
     this.lastPhase = null;
 
     this.layoutScene();
@@ -30,70 +48,71 @@ export class CantinaScene extends Phaser.Scene {
     });
   }
 
-  // Redibuja todo con las medidas actuales (al iniciar y en cada resize)
+  // Recalcula todo con las medidas actuales (al iniciar y en cada resize)
   layoutScene() {
     const { width, height } = this.scale.gameSize;
     const { table } = getLayout(width, height);
-    drawSunburst(this.background.clear(), width, height);
-    this.felt = drawTable(this.table.clear(), table);
+    this.area = table;
 
-    const cupHeight = Math.min(table.height * 0.34, table.width * 0.3);
-    this.cupSize = { width: cupHeight * 0.85, height: cupHeight };
-    drawCup(this.cupGraphics.clear(), this.cupSize.width, this.cupSize.height);
-    this.dieSize = cupHeight * 0.42;
-    this.tableTop = table.y;
+    if (this.background) {
+      // Recorte tipo "cover": llena la pantalla sin deformarse
+      const texture = this.textures.get(KEYS.cantinaBackground).getSourceImage();
+      const scale = Math.max(width / texture.width, height / texture.height);
+      this.background.setPosition(width / 2, height / 2).setScale(scale);
+    } else {
+      drawSunburst(this.fallback.clear(), width, height);
+    }
+    this.dim.setSize(width, height);
+
+    this.felt = drawRoundTable(this.table.clear(), table);
+
+    const cupHeight = Math.min(this.felt.height * 1.05, this.felt.width * 0.26);
+    drawCup(this.cupGraphics.clear(), cupHeight * 0.85, cupHeight);
+    this.cupHeight = cupHeight;
+    this.dieSize = cupHeight * 0.45;
+    // Tapado al centro de la mesa; destapado se corre a un lado, sin taparle la cara a nadie
+    this.cupRest = { x: this.felt.x, y: this.felt.y + this.felt.height * 0.12 };
+    this.cupAside = { x: this.felt.x + this.felt.width * 0.26, y: this.cupRest.y - this.felt.height * 0.08 };
 
     this.sync(this.store.get(), { animate: false });
   }
 
-  sync({ game, viewerId }, { animate = true } = {}) {
+  sync(snapshot, { animate = true } = {}) {
+    const { game, viewerId } = snapshot;
     const inGame = Boolean(game);
-    // Cortar cualquier animación en curso antes que nada: una animación viva podría volver a mostrar los dados
+    // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
     this.tweens.killTweensOf(this.cup);
     this.table.setVisible(inGame);
     this.cup.setVisible(inGame);
     this.dice.forEach((d) => d.setVisible(false));
+    // El menú se ve más oscuro que la mesa, para que el logo resalte
+    this.dim.setFillStyle(COLORS.fondo, inGame ? 0.35 : 0.72);
+    this.showCharacter(game);
+
     if (!inGame) {
       this.lastPhase = null;
       return;
     }
 
-    const baseY = this.felt.y + this.felt.height * 0.25;
-    const showDice = canSeeDice(game, viewerId) && !needsPassScreen({ game, viewerId });
+    const showDice = canSeeDice(game, viewerId) && !needsPassScreen(snapshot);
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
     this.lastPhase = game.phase;
 
-    this.cup.setPosition(this.felt.x, baseY).setAngle(0);
+    this.cup.setPosition(this.cupRest.x, this.cupRest.y).setAngle(0);
+    this.drawDice(game.round.dice);
 
-    if (showDice) {
-      const [a, b] = game.round.dice;
-      const gap = this.dieSize * 0.7;
-      [a, b].forEach((value, i) => {
-        const die = this.dice[i];
-        drawDie(die.clear(), this.dieSize, value);
-        die.setPosition(this.felt.x + (i === 0 ? -gap : gap), baseY - this.dieSize * 0.3).setAngle(i === 0 ? -8 : 10);
-      });
-    }
-
-    // Se levanta lo suficiente para dejar ver los dados, sin salirse del marco de la mesa
-    const liftedY = Math.max(baseY - this.cupSize.height * 0.9, this.tableTop + this.cupSize.height + 16);
     if (animate && justRolled) {
-      // Agitar y luego levantar el cubilete para mirar
       this.tweens.chain({
         targets: this.cup,
         tweens: [
           { angle: { from: -10, to: 10 }, duration: 90, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' },
           { angle: 0, duration: 60 },
           {
-            y: liftedY,
-            duration: 280,
+            ...this.cupAside,
+            angle: -14,
+            duration: 320,
             ease: 'Back.easeOut',
-            // Se vuelve a consultar al momento de mostrar, por si el estado cambió durante el agitado
-            onStart: () => {
-              const latest = this.store.get();
-              const visible = Boolean(latest.game) && canSeeDice(latest.game, latest.viewerId) && !needsPassScreen(latest);
-              this.dice.forEach((d) => d.setVisible(visible));
-            },
+            onStart: () => this.revealDice(),
           },
         ],
       });
@@ -101,9 +120,70 @@ export class CantinaScene extends Phaser.Scene {
     }
 
     this.dice.forEach((d) => d.setVisible(showDice));
-    if (showDice) {
-      if (animate) this.tweens.add({ targets: this.cup, y: liftedY, duration: 280, ease: 'Back.easeOut' });
-      else this.cup.y = liftedY;
+    if (!showDice) return;
+    if (animate) {
+      this.tweens.add({ targets: this.cup, ...this.cupAside, angle: -14, duration: 320, ease: 'Back.easeOut' });
+    } else {
+      this.cup.setPosition(this.cupAside.x, this.cupAside.y).setAngle(-14);
     }
+  }
+
+  // Los dados se redibujan siempre que haya tirada, nunca solo se ocultan:
+  // así no puede quedar dibujada la jugada de una ronda anterior.
+  drawDice(dice) {
+    if (!dice) {
+      this.dice.forEach((d) => d.clear());
+      return;
+    }
+    const gap = this.dieSize * 0.75;
+    dice.forEach((value, i) => {
+      const die = this.dice[i];
+      drawDie(die.clear(), this.dieSize, value);
+      die
+        .setPosition(this.felt.x - this.felt.width * 0.1 + (i === 0 ? -gap : gap), this.cupRest.y + this.dieSize * 0.1)
+        .setAngle(i === 0 ? -8 : 10);
+    });
+  }
+
+  // Se consulta de nuevo al destapar, por si el estado cambió durante el agitado
+  revealDice() {
+    const snapshot = this.store.get();
+    const visible = Boolean(snapshot.game) && canSeeDice(snapshot.game, snapshot.viewerId) && !needsPassScreen(snapshot);
+    if (visible) this.drawDice(snapshot.game.round.dice);
+    this.dice.forEach((d) => d.setVisible(visible));
+  }
+
+  // Muestra al jugador en turno sentado al otro lado de la mesa.
+  // Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
+  showCharacter(game) {
+    const index = this.characterSlot(game);
+    const key = index >= 0 ? portraitKey(characterIndexFor(index)) : null;
+    if (!key || !this.textures.exists(key)) {
+      this.character.setVisible(false);
+      return;
+    }
+
+    const texture = this.textures.get(key).getSourceImage();
+    // Cabe entre el techo del área de juego y el borde lejano de la mesa
+    const feet = this.felt.y - this.felt.height * 0.1;
+    const scale = Math.min((feet - this.area.y) / texture.height, (this.area.width * 0.45) / texture.width);
+    this.character
+      .setTexture(key)
+      .setScale(scale)
+      // A un costado, para que el cubilete nunca le tape la cara
+      .setPosition(this.felt.x - this.felt.width * 0.24, feet)
+      .setVisible(true);
+
+    // Preferencia del jugador: en sombra se ve solo la silueta, sin revelar el detalle del personaje
+    if (getPreference('silhouettes')) this.character.setTintFill(COLORS.borde);
+    else this.character.clearTint();
+  }
+
+  characterSlot(game) {
+    if (!game) return -1;
+    if (game.currentPlayerId) return game.players.findIndex((p) => p.id === game.currentPlayerId);
+    if (game.winnerId) return game.players.findIndex((p) => p.id === game.winnerId);
+    const loserId = game.round.result?.loserId;
+    return loserId ? game.players.findIndex((p) => p.id === loserId) : -1;
   }
 }

@@ -8,28 +8,57 @@ Lista de gráficos y sonidos para la Fase 2, con medidas, nombres de archivo y p
 2. Corre `npm run dev` y abre **http://localhost:5173/galeria.html**. Ahí ves qué falta y qué ya está, cada imagen sobre los colores del juego (rayos, crema o noche) y su tamaño real comparado con el esperado. La página se actualiza sola al guardar archivos.
 3. Avísale a Claude qué subiste y lo integra al juego. Lo ves en **http://localhost:5173**.
 
-## Estilo (igual para todo)
+## Estilo
 
-El wireframe manda: ilustración plana, contorno negro grueso, sin degradados ni texturas, con la paleta del juego. El logo puede mantener su textura actual, pero personajes y fondos van planos para que todo combine.
+Decidido el 2026-10-21 (opción A): **fondo pintado y personajes planos encima**.
 
-Prefijo de estilo para pegar al inicio de cada prompt:
+- **Fondos:** ilustración pintada, con luz cálida, sombras y textura. Pueden llevar letreros y marcas locales, que le dan el toque cusqueño.
+- **Personajes, cubilete y elementos sueltos:** planos, con contorno negro grueso, sin degradados, con la paleta del juego y luz ámbar para que combinen con el fondo.
+
+Prefijo de estilo para personajes y elementos sueltos:
 
 ```
-Flat 2D cartoon illustration, bold uniform black outlines, no gradients, no texture, no shading,
-limited palette: warm black #120d0a, dark wood brown #6b3f24, amber #ffc46e, toasted orange #f2a33a,
-cream #f4ead7, burnt red #c23a2b, colonial blue #2f5d9e, dull gold #f2c230.
-Inspired by Ayacucho retablo folk art and a Cusco night cantina. No text, no letters.
+Flat 2D cartoon illustration, bold uniform black outlines, flat colors, no gradients, no texture,
+warm amber lighting, limited palette: warm black #120d0a, dark wood brown #6b3f24, amber #ffc46e,
+toasted orange #f2a33a, cream #f4ead7, burnt red #c23a2b, colonial blue #2f5d9e, dull gold #f2c230.
+No text, no letters, no logos.
 ```
 
 ## 1. Logo
 
-- [ ] `src/assets/images/shared/logo.png` · unos 1600 x 1000 px · **fondo transparente**
+- [x] `src/assets/images/shared/logo.webp` · 1100 x 733 px · fondo transparente · 220 KB
 
-Es el logo que ya tienes (`recursos-fv/Gran_Quispe_logo.png`), sin el fondo negro. Puedes quitarlo con remove.bg, Photopea o el removedor de fondo de Canva. Revisa que no quede un halo oscuro alrededor de las letras.
+Hecho el 2026-10-21 a partir de `recursos-fv/Gran_Quispe_logo.png`. No se recortó a mano: la opacidad de cada píxel sale de su brillo, así el halo dorado se conserva en vez de quedar un borde duro. Para regenerarlo (si cambia el logo original) se corre este script desde la raíz del proyecto, con `pip install pillow numpy`:
+
+```python
+from PIL import Image
+import numpy as np
+
+src = Image.open('recursos-fv/Gran_Quispe_logo.png').convert('RGB')
+w, h = src.size
+target = 1100
+src = src.resize((target, round(h * target / w)), Image.LANCZOS)
+
+rgb = np.asarray(src).astype(np.float32)
+luma = rgb @ np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+alpha = np.clip((luma - 5.0) * (255.0 / 72.0), 0, 255)
+
+# Devuelve el brillo que se pierde al separar el alfa
+out_rgb = np.clip(rgb * 255.0 / np.maximum(alpha, 1.0)[..., None], 0, 255)
+# Donde casi no hay opacidad el color no se ve, pero sí pesa: se aplana al dorado del halo
+out_rgb[alpha < 10] = np.array([242, 194, 48], dtype=np.float32)
+
+out = np.dstack([out_rgb, alpha]).astype(np.uint8)
+Image.fromarray(out, 'RGBA').save('src/assets/images/shared/logo.webp', 'WEBP', quality=84, method=6)
+```
+
+No se usa `mix-blend-mode: screen` en el CSS: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundir el logo con él.
 
 ## 2. Fondo de la cantina
 
-- [ ] `src/assets/images/cantina/cantina-fondo.webp` · 2560 x 2560 px (cuadrado)
+- [x] `src/assets/images/cantina/cantina-fondo.webp` · 2560 x 2560 px (cuadrado)
+
+Hecho con ChatGPT (original de 1254 px en `recursos-fv/graficos/Fondo1_Cantina_andina.png`), escalado a 2560 px y pasado a WebP. El prompt de abajo queda como referencia para los otros escenarios.
 
 Es cuadrado para que sirva en celular (vertical) y en PC (horizontal): el juego recorta los bordes, así que lo importante debe ir al centro. Sin mesa ni personajes, porque esos se dibujan encima.
 
@@ -41,33 +70,37 @@ image is an empty wooden wall area (no table, no people). Square composition, im
 near the center.
 ```
 
-## 3. Personajes (muñecos de madera pintados)
+## 3. Personajes
 
-- [ ] `cantina-personaje-1.png` a `cantina-personaje-4.png` (obligatorios)
+- [x] `cantina-personaje-1.png` a `cantina-personaje-4.png` (obligatorios), con sus avatares `cantina-avatar-1.png` a `-4.png` de 192 x 192
 - [ ] `cantina-personaje-5.png` a `cantina-personaje-8.png` (opcionales, para partidas de 5 a 8)
 
-Carpeta: `src/assets/images/cantina/` · 512 x 768 px · **fondo transparente** · de la cintura para arriba, mirando al frente.
+Carpeta: `src/assets/images/cantina/` · 512 x 768 px · **fondo transparente** · de la cintura para arriba, mirando al frente. Son gente cotidiana del Cusco con personalidad.
 
-Prompt base (cambia solo la parte entre corchetes):
+Los 4 se generan en **una sola imagen vertical (2:3) con una cuadrícula de 2 x 2**, para que salgan con el mismo estilo y la misma escala. Así cada celda mide casi 512 x 768. Guarda la imagen completa en `recursos-fv/graficos/` y Claude los recorta, quita el fondo si hace falta, los centra en su lienzo y les pone el nombre.
 
 ```
-[prefijo de estilo] A painted wooden doll character in Andean folk-toy style, simple rounded
-shapes, visible wood-carved look, waist-up, facing the viewer, friendly expression,
-[DESCRIPCIÓN], centered, transparent background.
+Character sheet, vertical 2:3 image, 2x2 grid, 4 separate characters with the same art style
+and scale. Each one waist-up, facing the viewer, centered in its cell with empty space around.
+Flat 2D cartoon, bold black outlines, flat colors, no gradients, warm amber lighting,
+slightly exaggerated proportions, very expressive faces. Regulars of a night cantina in Cusco,
+Peru, playing a dice bluffing game. Transparent background. No text, no logos.
+
+1. Top left: cheeky kid around 12, red football jersey with white trim (Cienciano fan),
+   messy hair, mischievous grin.
+2. Top right: sharp grandmother around 60, round glasses on the tip of her nose, knitted
+   cardigan, gray bun, one eyebrow raised, suspicious smile.
+3. Bottom left: young office worker around 30 just off work, white shirt, loosened tie,
+   rolled-up sleeves, tired eyes but a confident smirk.
+4. Bottom right: scruffy old-school bus driver around 50, thick mustache, stubble, belly,
+   half-unbuttoned shirt, cap tilted back, toothpick in his mouth, sly look.
 ```
 
-Ideas para la descripción:
+**Consejos:**
 
-1. young man wearing a red and gold chullo knitted hat with ear flaps and a burnt-red poncho
-2. woman with two long braids, a flat montera hat and a colorful lliclla shawl
-3. older man with a moustache, a felt hat and a dark brown poncho with gold trim
-4. young woman with a bowler hat, a pollera skirt and a blue embroidered jacket
-5. man playing a charango, wearing a chullo and a striped poncho
-6. grandmother with a shawl and a basket, kind smile
-7. university student with a modern jacket over a small woven scarf
-8. musician with a quena flute and a colonial-blue poncho
-
-**Consejo:** genera los 8 en la misma sesión y pide "same style as the previous character", así salen parejos. Si alguno sale con degradados o sombras, pide "flat colors only".
+- Si uno sale mal, pide rehacer solo ese: "redo only the bottom-right character, keep the other three exactly the same".
+- Para los personajes 5 a 8, adjunta la hoja anterior y pide "same style and scale as the attached characters".
+- Si no sale transparente, pide "plain white background": con el contorno negro se quita fácil.
 
 ## 4. Cubilete y marco (opcionales)
 
@@ -80,11 +113,11 @@ Hoy se dibujan en código y ya se ven bien. Si quieres que se parezcan más al l
 
 Carpeta `src/assets/audio/`, formato OGG (si solo consigues MP3 o WAV, Claude lo convierte).
 
-- [ ] `sfx-agitar-cubilete.ogg` · dados sonando dentro del cubilete (1 a 2 s)
-- [ ] `sfx-golpe-cubilete.ogg` · cubilete contra la mesa
-- [ ] `sfx-destapar.ogg` · levantar el cubilete
-- [ ] `sfx-cholada.ogg` · sonido cómico de error
-- [ ] `sfx-boton.ogg` · clic suave de madera
+- [x] `sfx-agitar-cubilete.ogg` · dados sonando dentro del cubilete (1 a 2 s)
+- [x] `sfx-golpe-cubilete.ogg` · cubilete contra la mesa
+- [x] `sfx-destapar.ogg` · levantar el cubilete
+- [x] `sfx-cholada.ogg` · sonido cómico de error
+- [x] `sfx-boton.ogg` · clic suave de madera
 - [ ] `musica-cantina.ogg` · bucle instrumental andino tranquilo (opcional)
 
 Dónde conseguirlos gratis y con licencia libre:

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { preloadSfx } from './app/audio.js';
+import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
 import { CantinaScene } from './scenes/CantinaScene.js';
 import { BarScene } from './scenes/BarScene.js';
@@ -7,7 +9,11 @@ import { COLORS, FONTS, toCss } from './scenes/shared/theme.js';
 import { mountApp } from './ui/app.js';
 
 const store = createGameStore();
+connectGameSounds(store);
 mountApp(document.getElementById('ui'), store);
+
+// Los navegadores solo permiten sonido tras un gesto del usuario: se precarga en el primer toque
+addEventListener('pointerdown', preloadSfx, { once: true });
 
 // El canvas ocupa toda la ventana; cada escena reacomoda su contenido
 // según el ancho (celular angosto, PC más ancho) con scenes/shared/layout.js

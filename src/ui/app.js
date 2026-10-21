@@ -1,4 +1,5 @@
 // Enrutador de la capa HTML: menú → configuración → partida.
+import { playSfx } from '../app/audio.js';
 import { needsPassScreen } from '../app/gameStore.js';
 import { loadGame } from '../storage/localSave.js';
 import { CallSheet, GameHud, stopClock } from './GameHud.js';
@@ -14,6 +15,11 @@ export function mountApp(root, store) {
   store.subscribe(() => {
     callSheetOpen = false;
     render();
+  });
+
+  // Un solo punto para el clic de todos los botones, en vez de repetirlo en cada componente
+  root.addEventListener('click', (e) => {
+    if (e.target.closest('button')) playSfx('click');
   });
 
   function render() {
@@ -36,6 +42,7 @@ export function mountApp(root, store) {
           canContinue: Boolean(saved),
           onContinue: () => store.resume(saved),
           onPlay: () => go('setup'),
+          onRefresh: render,
         }),
       );
     }
@@ -64,6 +71,7 @@ export function mountApp(root, store) {
           players: game.players.map(({ id, name, isBot, personality }) => ({ id, name, isBot, personality })),
         }),
       onMenu: () => go('menu', () => store.abandon()),
+      onRefresh: render,
     });
     if (!callSheetOpen) return [hud];
     return [

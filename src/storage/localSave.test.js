@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SAVE_TTL_MS, clearSave, loadGame, saveGame } from './localSave.js';
+import { SAVE_TTL_MS, clearSave, loadGame, loadSettings, saveGame, saveSettings } from './localSave.js';
 
 function memoryStorage() {
   const data = new Map();
@@ -72,6 +72,26 @@ describe('localSave', () => {
     expect(loadGame({ storage: broken })).toBeNull();
     expect(() => clearSave({ storage: broken })).not.toThrow();
     expect(loadGame({ storage: null })).toBeNull();
+  });
+
+  it('las preferencias se guardan aparte de la partida y no expiran', () => {
+    const storage = memoryStorage();
+    saveSettings({ muted: true }, { storage });
+    saveGame(STATE, { storage, now: 0 });
+    clearSave({ storage });
+    expect(loadSettings({ storage })).toEqual({ muted: true });
+    expect(loadGame({ storage, now: 0 })).toBeNull();
+  });
+
+  it('unas preferencias ausentes o corruptas devuelven un objeto vacío', () => {
+    const storage = memoryStorage();
+    expect(loadSettings({ storage })).toEqual({});
+    storage.setItem('gran-quispe:ajustes', '{roto');
+    expect(loadSettings({ storage })).toEqual({});
+    storage.setItem('gran-quispe:ajustes', '"texto"');
+    expect(loadSettings({ storage })).toEqual({});
+    expect(loadSettings({ storage: null })).toEqual({});
+    expect(() => saveSettings({ muted: true }, { storage: null })).not.toThrow();
   });
 
   it('clearSave borra la partida', () => {

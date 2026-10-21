@@ -1,6 +1,7 @@
 // Panel de configuración de partida: modo, jugadores (2 a 8), vidas, texto de castigo y variantes.
 // Las variantes se generan desde engine/variants.js: agregar una nueva no requiere tocar este archivo,
 // solo sus textos en i18n.
+import { getPreference, setPreference } from '../app/preferences.js';
 import { MAX_LIVES, MIN_LIVES, DEFAULT_LIVES, MODES } from '../engine/modes.js';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../engine/rules.js';
 import { VARIANTS, resolveVariants } from '../engine/variants.js';
@@ -53,6 +54,7 @@ export function RulesPanel({ draft, onBack, onStart }) {
         draft.mode === 'lives' && livesCard(),
         draft.mode === 'penalty' && penaltyCard(),
         variantsCard(),
+        displayCard(),
       ),
       h(
         'footer',
@@ -181,6 +183,30 @@ export function RulesPanel({ draft, onBack, onStart }) {
             ),
         );
       }),
+    );
+  }
+
+  // Preferencia de presentación, no una regla: se guarda aparte y vale para todas las partidas
+  function displayCard() {
+    return card(
+      t('setup.display'),
+      h(
+        'label',
+        { class: 'variant__row' },
+        h(
+          'span',
+          { class: 'variant__text' },
+          h('strong', {}, t('setup.silhouettes')),
+          h('small', {}, t('setup.silhouettes.description')),
+        ),
+        h('input', {
+          class: 'switch',
+          type: 'checkbox',
+          role: 'switch',
+          checked: getPreference('silhouettes'),
+          onChange: (e) => setPreference('silhouettes', e.target.checked),
+        }),
+      ),
     );
   }
 

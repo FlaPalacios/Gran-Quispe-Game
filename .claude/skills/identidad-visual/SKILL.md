@@ -9,16 +9,28 @@ La referencia visual es el wireframe hecho en Claude Design: `recursos-fv/refere
 
 ## Lo que se toma del wireframe
 
-- Fondo de rayos de sol en naranja tostado y ámbar dorado detrás de cada pantalla.
-- Mesa dentro de un marco de madera tipo retablo con remaches dorados; arco con ventana, banderines de colores y botellas en la cantina.
 - Mesa de paño azul colonial, cubilete de madera con franjas roja y dorada, dados blancos.
 - Tarjetas y paneles color crema con contorno negro grueso y sombra sólida desplazada hacia abajo (sin desenfoque).
 - Botón principal rojo quemado, botón secundario azul colonial, texto crema.
 - Tarjetas de jugador con avatar redondo y las 6 letras QUISPE en casillas: perdidas en rojo quemado, pendientes en gris oscuro.
 
+## Lo que cambió al llegar el arte definitivo (2026-10-21)
+
+- **El fondo de rayos de sol ya no se usa.** Cada escenario tiene su fondo ilustrado; el de rayos (`drawSunburst`) queda solo como respaldo si la imagen no carga.
+- **La mesa ya no lleva marco de retablo.** El fondo ya pone el ambiente, así que la mesa es una elipse de madera con paño azul en la parte baja (`drawRoundTable`). El marco antiguo (`drawTable`) sigue disponible por si un escenario lo necesita.
+- **El menú ya no dibuja el título con tipografía**, sino el logo: `src/assets/images/shared/logo.webp`.
+- El escenario se oscurece con una capa de `--color-fondo`: al 72 % en el menú (para que resalte el logo) y al 35 % en la mesa (para que se lea el HUD).
+
+## Composición de la mesa
+
+De atrás hacia adelante: fondo del escenario → capa de oscurecido → personaje del jugador en turno → mesa → dados → cubilete.
+
+- El personaje se ve de la cintura para arriba, sentado al otro lado de la mesa y corrido hacia un lado, para que el cubilete nunca le tape la cara. Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
+- Al destapar, el cubilete **no se levanta en alto**: se corre a un costado de la mesa y se inclina. Así no invade el resto de la escena.
+
 ## Responsivo
 
-Cada pantalla tiene dos distribuciones: celular (una columna, como el wireframe) y PC desde 1024 px en horizontal (mesa a la izquierda, HUD a la derecha; menú y configuración en dos columnas con ancho máximo). Los assets deben verse bien en ambos: fondos que se puedan recortar o extender sin perder el centro, y nada de texto dentro de las imágenes.
+Cada pantalla tiene dos distribuciones: celular (una columna, como el wireframe) y PC desde 1024 px en horizontal (mesa a la izquierda, HUD a la derecha; menú y configuración en dos columnas con ancho máximo). Los assets deben verse bien en ambos: fondos que se puedan recortar o extender sin perder el centro, y nada de texto de interfaz dentro de las imágenes (los letreros que forman parte del fondo sí se permiten).
 
 ## Paleta (usar solo estos colores)
 
@@ -48,9 +60,12 @@ Las variables CSS están definidas en `src/ui/styles.css`. En la capa HTML se us
 
 ## Estilo gráfico
 
-- Ilustración plana, sin degradados.
+Decidido el 2026-10-21 (opción A): **fondo pintado y personajes planos encima**.
+
+- Fondos de escenario: ilustración pintada, con luz cálida, sombras y textura. Pueden llevar letreros y marcas locales (le dan el toque cusqueño).
+- Personajes, UI, cubilete y elementos sueltos: planos, sin degradados, con luz ámbar para combinar con el fondo.
 - Contornos negros gruesos de 3-4 px (en Phaser, `setStrokeStyle(4, 0x000000)`; en CSS, `var(--borde-grueso)`).
-- Personajes tipo muñeco de madera pintado con ropa regional cusqueña, **solo en el escenario de cantina**.
+- Personajes: gente cotidiana del Cusco con personalidad (el chibolo hincha del Cienciano, la abuela con lentes, el oficinista, el chofer de bus), **solo en el escenario de cantina**. Prompt en `recursos-fv/Fase 2 — Assets.md`.
 - Bar universitario y paisaje andino: solo ambientación, sin personajes.
 
 ## Tamaños de sprite (propuesta inicial)
@@ -60,6 +75,7 @@ Los assets se exportan al doble de su tamaño en pantalla para verse nítidos en
 | Asset | Tamaño del archivo |
 | --- | --- |
 | Fondo de escenario | 2560 x 2560 px (cuadrado, sirve para vertical y horizontal) |
+| Logo | 1100 x 733 px, con transparencia |
 | Mesa | 1440 x 1100 px |
 | Cubilete | 320 x 400 px |
 | Cara de dado | 160 x 160 px |
@@ -73,5 +89,9 @@ Los assets se exportan al doble de su tamaño en pantalla para verse nítidos en
 - Imágenes por escenario en `src/assets/images/<escenario>/` con prefijo del escenario: `cantina-`, `bar-`, `andino-`.
 - Lo común a los tres escenarios (dados, cubilete, iconos) en `src/assets/images/shared/`.
 - Audio en `src/assets/audio/` con prefijo de tipo: `sfx-agitar-cubilete.ogg`, `musica-cantina.ogg`.
-- Formatos: PNG para sprites, WebP para fondos grandes, OGG + MP3 para audio.
+- Formatos: PNG para sprites, WebP para fondos grandes y para el logo, OGG + MP3 para audio (el audio va en los dos formatos: Safari no reproduce OGG).
 - La clave de carga en Phaser es el nombre del archivo sin extensión.
+
+## El logo
+
+El original (`recursos-fv/Gran_Quispe_logo.png`) viene sobre fondo negro con halo. La versión del juego se genera con transparencia real a partir del brillo de cada píxel, no con `mix-blend-mode`: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundirse con él. El script está en `recursos-fv/Fase 2 — Assets.md`.

@@ -3,7 +3,8 @@
 export const DESKTOP_MIN_WIDTH = 1024;
 
 export function getLayout(width, height) {
-  const isDesktop = width >= DESKTOP_MIN_WIDTH && width > height;
+  // El >= iguala a la media query de styles.css, donde "landscape" incluye la ventana cuadrada
+  const isDesktop = width >= DESKTOP_MIN_WIDTH && width >= height;
 
   if (isDesktop) {
     // Escritorio: mesa a la izquierda, HUD (HTML) en una columna a la derecha
@@ -29,7 +30,7 @@ export function getLayout(width, height) {
       x: margin,
       y: Math.max(Math.round(height * 0.09), 60),
       width: width - margin * 2,
-      height: Math.round(height * 0.44),
+      height: Math.round(height * 0.42),
     },
   };
 }

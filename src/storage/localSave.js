@@ -2,6 +2,8 @@
 // Única pieza del proyecto que toca localStorage.
 
 const KEY = 'gran-quispe:partida';
+// Preferencias del jugador (silencio). No expiran, a diferencia de la partida.
+const SETTINGS_KEY = 'gran-quispe:ajustes';
 // Subir si cambia la forma del estado: las partidas viejas se descartan en vez de romper el juego
 const VERSION = 2;
 export const SAVE_TTL_MS = 60 * 60 * 1000;
@@ -35,6 +37,23 @@ export function loadGame({ storage = defaultStorage(), now = Date.now() } = {}) 
     return state;
   } catch {
     return null;
+  }
+}
+
+export function loadSettings({ storage = defaultStorage() } = {}) {
+  try {
+    const parsed = JSON.parse(storage?.getItem(SETTINGS_KEY) ?? 'null');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveSettings(settings, { storage = defaultStorage() } = {}) {
+  try {
+    storage?.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // Sin guardado, la preferencia dura solo esta sesión
   }
 }
 

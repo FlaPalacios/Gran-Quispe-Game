@@ -26,6 +26,8 @@ npm run build      # build de producción en dist/
 npm run preview    # sirve el build
 ```
 
+Con `npm run dev`, `http://localhost:5173/galeria.html` muestra qué assets faltan y cómo se ven (solo desarrollo, no entra al build). La lista vive en `src/dev/assetList.js` y la guía para crearlos en `recursos-fv/Fase 2 — Assets.md`.
+
 Requiere Node 22.12 o superior.
 
 ## Stack
@@ -67,6 +69,10 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 
 **Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase) y `turnStartedAt` (desde cuándo corre el reloj de presión). Textos visibles: `t('clave', params)` de `src/i18n/index.js`.
 
+**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx('shake' | 'thud' | 'reveal' | 'cholada' | 'click')`, con silencio recordado en localStorage. `connectGameSounds(store)` escucha los cambios de fase y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
+
+**Personajes (`src/app/characters.js`):** reparte un personaje por jugador según su posición en la lista. Lo usan la tarjeta HTML (avatar) y la escena (personaje grande), para que siempre muestren a la misma persona. Si hay más jugadores que personajes, se repiten.
+
 **Depurar en el navegador:** en `npm run dev`, `window.__game` (Phaser) y `window.__store` están disponibles en la consola.
 
 ## Referencia visual y diseño responsivo
@@ -93,9 +99,14 @@ src/
     modes.js           # Clásico, Por vidas, Castigo personalizado
     variants.js        # registro de variantes, costo de perder y destape
     bots.js            # personalidades de bots (Fase 4)
-  app/gameStore.js     # puente motor ↔ vista (estado, azar real, guardado, suscripciones)
+  app/                 # puente motor ↔ vista
+    gameStore.js       # estado, azar real, guardado, suscripciones
+    audio.js           # efectos de sonido y silencio
+    gameSounds.js      # qué suena en cada cambio de fase
+    characters.js      # qué personaje le toca a cada jugador
   scenes/              # CantinaScene, BarScene, AndinoScene
-    shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados)
+    shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
+  dev/                 # galería de assets (solo desarrollo)
   ui/                  # app.js (enrutador), MainMenu, RulesPanel, PassDeviceScreen, GameHud, styles.css
   assets/
     images/{cantina,bar,andino,shared}/
@@ -218,14 +229,18 @@ Pendientes menores detectados:
 - En iPhone con muesca, la barra superior no reserva la zona segura en el cálculo de la mesa.
 - Texto crema sobre rojo (etiqueta "Juego de dados", letras perdidas) queda en 4,48:1 de contraste, apenas bajo 4,5.
 
-### Fase 2: Arte y sonido de la cantina
+### Fase 2: Arte y sonido de la cantina (completada el 2026-10-21, 73 tests, probada en navegador a 390 px y 1536 px, revisada por `code-reviewer`)
 
-Paleta, tipografía, ilustraciones y audio del primer escenario, tomando como referencia el wireframe.
+Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos); origen y licencias en `recursos-fv/creditos.md`.
 
-- [ ] Menú principal (celular y PC)
-- [ ] Mesa de cantina, cubilete y dados con animaciones de rebote
-- [ ] Personajes de madera pintada
-- [ ] Efectos de sonido y música
+- [x] Menú principal con el logo sobre la cantina (celular y PC)
+- [x] Fondo ilustrado de la cantina, mesa redonda, cubilete y dados
+- [x] Personajes: gente cotidiana del Cusco sobre el fondo pintado (estilo A)
+- [x] Mesa en primera persona: solo se ve al jugador en turno, sentado al otro lado; los demás van con su avatar en las tarjetas. Ilustrado a color por defecto, o en silueta con la opción "Personajes en sombra" del panel
+- [x] Avatares reales en las tarjetas de jugador
+- [x] Efectos de sonido (agitar, golpe, destapar, cholada, botón) con botón de silencio
+- [x] Imágenes en WebP: 2 MB menos de descarga (los PNG quedan en `recursos-fv/graficos/png-originales/`)
+- [ ] Música: la compone Flavio en FL Studio (`musica-cantina.ogg`)
 
 ### Fase 3: Escenarios y panel de reglas completos
 
@@ -252,6 +267,7 @@ Paleta, tipografía, ilustraciones y audio del primer escenario, tomando como re
 | Contenido de alcohol en el modo castigo | El castigo es texto libre editable, no identidad fija del juego |
 | Mezclar lógica y vista | Motor aislado en `src/engine/`, revisado por `code-reviewer` |
 | Diseño pensado solo para celular | Layout con breakpoint de escritorio desde la Fase 1 |
+| Marcas reales dentro del arte | El fondo de la cantina muestra "Cusqueña" (cerveza de Backus) y el personaje 1 lleva la camiseta del Cienciano. Para portafolio privado no hay problema, pero antes de publicarlo o de aceptar donaciones conviene reemplazarlos por nombres inventados con el mismo aire (por ejemplo "Cusqueñita", o una camiseta roja sin escudo) |
 
 ## Decisiones pendientes
 

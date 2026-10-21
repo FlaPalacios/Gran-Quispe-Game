@@ -4,16 +4,29 @@
 export const EXPECTED_ASSETS = [
   {
     group: 'Logo',
-    items: [{ path: 'images/shared/logo.png', size: '1600 x 1000 px aprox.', note: 'Logo actual con fondo transparente' }],
+    items: [
+      {
+        path: 'images/shared/logo.webp',
+        size: '1100 x 733 px',
+        note: 'Con transparencia, generado desde el original (script en recursos-fv/Fase 2 — Assets.md)',
+      },
+    ],
   },
   {
     group: 'Cantina',
     items: [
       { path: 'images/cantina/cantina-fondo.webp', size: '2560 x 2560 px', note: 'Interior sin personajes ni mesa; lo importante al centro' },
+      // Cada personaje necesita sus dos piezas: si falta una, ese personaje no se usa
       ...Array.from({ length: 8 }, (_, i) => ({
-        path: `images/cantina/cantina-personaje-${i + 1}.png`,
+        path: `images/cantina/cantina-personaje-${i + 1}.webp`,
         size: '512 x 768 px',
-        note: i < 4 ? 'Muñeco de madera pintado, fondo transparente' : 'Opcional (para partidas de 5 a 8)',
+        note: i < 4 ? 'Personaje plano con contorno, fondo transparente' : 'Opcional (para partidas de 5 a 8)',
+        optional: i >= 4,
+      })),
+      ...Array.from({ length: 8 }, (_, i) => ({
+        path: `images/cantina/cantina-avatar-${i + 1}.webp`,
+        size: '192 x 192 px',
+        note: 'Cara del personaje para la tarjeta de jugador (Claude la recorta)',
         optional: i >= 4,
       })),
     ],

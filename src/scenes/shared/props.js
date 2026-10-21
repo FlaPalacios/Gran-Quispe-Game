@@ -16,6 +16,30 @@ export function drawSunburst(g, width, height) {
   }
 }
 
+// Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
+// Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
+// Devuelve el centro y tamaño del paño, donde van el cubilete y los dados.
+export function drawRoundTable(g, area) {
+  const width = area.width * 0.9;
+  const height = Math.min(area.height * 0.42, width * 0.46);
+  const cx = area.x + area.width / 2;
+  const cy = area.y + area.height - height * 0.52;
+
+  // Canto de madera
+  g.fillStyle(COLORS.madera).fillEllipse(cx, cy, width, height);
+  g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(cx, cy, width, height);
+
+  // Paño
+  const felt = { x: cx, y: cy, width: width * 0.84, height: height * 0.72 };
+  g.fillStyle(COLORS.retabloAzul).fillEllipse(felt.x, felt.y, felt.width, felt.height);
+  g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(felt.x, felt.y, felt.width, felt.height);
+
+  // Hilo dorado del borde del paño; crece con la mesa para no desaparecer en pantallas grandes
+  const thread = Math.max(2, Math.round(felt.width / 220));
+  g.lineStyle(thread, COLORS.retabloDorado, 0.7).strokeEllipse(felt.x, felt.y, felt.width * 0.9, felt.height * 0.86);
+  return felt;
+}
+
 // Marco de madera tipo retablo con remaches dorados y paño azul. Devuelve el centro del paño.
 export function drawTable(g, table) {
   const radius = Math.min(28, table.width * 0.06);

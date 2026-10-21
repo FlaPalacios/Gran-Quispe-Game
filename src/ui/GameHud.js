@@ -1,9 +1,11 @@
 // HUD de la partida (HTML sobre el canvas): panel de turno, tarjetas de jugadores y acciones.
 // Solo lee el estado y envía acciones al store; las reglas las decide el motor.
+import { avatarFor } from '../app/characters.js';
 import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
 import { PHASES, RESULTS, canSeeDice, getLastCall } from '../engine/rules.js';
 import { t } from '../i18n/index.js';
+import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 import { formatCall, lossUnit, modeName, playerName } from './format.js';
 
@@ -17,7 +19,7 @@ export function stopClock() {
   clockInterval = null;
 }
 
-export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onMenu }) {
+export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
   return h(
@@ -27,14 +29,19 @@ export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onM
       'div',
       { class: 'hud__top' },
       h('span', { class: 'pill' }, t('game.round', { n: game.round.number, mode: modeName(game.config.mode) })),
-      h('button', { class: 'btn btn--light btn--small', onClick: onExit }, t('game.exit')),
+      h(
+        'span',
+        { class: 'hud__top-actions' },
+        SoundToggle({ onChange: onRefresh }),
+        h('button', { class: 'btn btn--light btn--small', onClick: onExit }, t('game.exit')),
+      ),
     ),
     h(
       'section',
       { class: 'hud__panel' },
       turnCard(snapshot, current, store),
       actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }),
-      h('div', { class: 'players' }, game.players.map((p) => playerCard(game, p))),
+      h('div', { class: 'players' }, game.players.map((p, i) => playerCard(game, p, i))),
     ),
   );
 }
@@ -134,13 +141,16 @@ function actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
   }
 }
 
-function playerCard(game, player) {
+function playerCard(game, player, index) {
   const isTurn = player.id === game.currentPlayerId;
   const classes = ['player', isTurn && 'is-turn', player.eliminated && 'is-out'].filter(Boolean).join(' ');
+  const avatar = avatarFor(index);
   return h(
     'article',
     { class: classes, 'aria-current': isTurn ? 'true' : null },
-    h('span', { class: 'player__avatar', 'aria-hidden': 'true' }, player.name.charAt(0).toUpperCase()),
+    avatar
+      ? h('img', { class: 'player__avatar', src: avatar, alt: '', width: '192', height: '192' })
+      : h('span', { class: 'player__avatar player__avatar--initial', 'aria-hidden': 'true' }, player.name.charAt(0).toUpperCase()),
     h('span', { class: 'player__name' }, player.name),
     player.eliminated
       ? h('span', { class: 'player__out' }, t('player.out'))
