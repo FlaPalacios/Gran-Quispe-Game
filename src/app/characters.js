@@ -14,19 +14,44 @@ const portraitFiles = import.meta.glob('../assets/images/cantina/cantina-persona
   import: 'default',
 });
 
-const byNumber = (a, b) => Number(a.match(/-(\d+)\.\w+$/)[1]) - Number(b.match(/-(\d+)\.\w+$/)[1]);
-const sortedUrls = (files) => Object.keys(files).sort(byNumber).map((path) => files[path]);
+// Cómo reacciona el personaje. Claves en inglés (código), sufijo del archivo en español.
+// La neutral es obligatoria; las otras pueden faltar y se cae de vuelta a ella.
+export const POSES = Object.freeze({
+  neutral: '',
+  caught: '-descubierto', // lo pillaron mintiendo (o se quinceó)
+  gloating: '-descubre', // pilló al mentiroso, o ganó la partida
+});
 
-const avatars = sortedUrls(avatarFiles);
-const portraits = sortedUrls(portraitFiles);
+// cantina-personaje-3-descubierto.webp → personaje 3, pose '-descubierto'.
+// Los dos tipos de archivo se ordenan por su número, no por el orden del glob: así el avatar
+// 3 y el personaje 3 son siempre la misma persona aunque falte alguno por el camino.
+const FILE_NUMBER = /-(\d+)(-[a-z]+)?\.\w+$/;
 
-// Un personaje solo cuenta si tiene sus dos piezas: avatar para la tarjeta e ilustración para la mesa
-export const CHARACTER_COUNT = Math.min(avatars.length, portraits.length);
+const avatars = [];
+for (const [path, url] of Object.entries(avatarFiles)) {
+  const parts = path.match(FILE_NUMBER);
+  if (parts) avatars[Number(parts[1]) - 1] = url;
+}
 
-if (import.meta.env?.DEV && avatars.length !== portraits.length) {
+const portraits = [];
+for (const [path, url] of Object.entries(portraitFiles)) {
+  const parts = path.match(FILE_NUMBER);
+  if (!parts) continue;
+  portraits[Number(parts[1]) - 1] = { ...portraits[Number(parts[1]) - 1], [parts[2] ?? '']: url };
+}
+
+// Un personaje solo cuenta si tiene sus dos piezas: avatar para la tarjeta e ilustración para
+// la mesa. Se cuentan desde el 1 y sin saltos: el personaje 3 no sirve si falta el 2.
+let complete = 0;
+while (avatars[complete] && portraits[complete]?.[POSES.neutral]) complete++;
+
+export const CHARACTER_COUNT = complete;
+
+if (import.meta.env?.DEV && (avatars.length > CHARACTER_COUNT || portraits.length > CHARACTER_COUNT)) {
   console.warn(
-    `[Gran Quispe] Hay ${avatars.length} avatares y ${portraits.length} personajes en src/assets/images/cantina/. ` +
-      `Se usan ${CHARACTER_COUNT}: cada personaje necesita su avatar y su ilustración.`,
+    `[Gran Quispe] Hay archivos hasta el avatar ${avatars.length} y el personaje ${portraits.length} ` +
+      `en src/assets/images/cantina/, pero se usan ${CHARACTER_COUNT}: cada personaje necesita su ` +
+      'avatar y su ilustración, numerados desde el 1 y sin saltos.',
   );
 }
 
@@ -38,5 +63,11 @@ export function characterIndexFor(playerIndex) {
 export const avatarFor = (playerIndex) => avatars[characterIndexFor(playerIndex)] ?? null;
 
 // Para el cargador de Phaser: una clave estable y su URL
-export const portraitKey = (characterIndex) => `cantina-personaje-${characterIndex + 1}`;
-export const portraitUrl = (characterIndex) => portraits[characterIndex] ?? null;
+// Una pose que no existe cae en la neutral, que siempre está
+const suffix = (pose) => (Object.hasOwn(POSES, pose) ? POSES[pose] : POSES.neutral);
+
+export const portraitKey = (characterIndex, pose = 'neutral') =>
+  `cantina-personaje-${characterIndex + 1}${suffix(pose)}`;
+
+export const portraitUrl = (characterIndex, pose = 'neutral') =>
+  portraits[characterIndex]?.[suffix(pose)] ?? null;

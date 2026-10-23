@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { characterIndexFor, portraitKey } from '../app/characters.js';
 import { needsPassScreen, viewerCanSeeDice } from '../app/gameStore.js';
 import { getPreference } from '../app/preferences.js';
+import { roundReaction } from '../app/reaction.js';
 import { PHASES } from '../engine/rules.js';
-import { KEYS, preloadCantina } from './shared/assets.js';
+import { KEYS, preloadCantina, queuePortraitPoses } from './shared/assets.js';
 import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
 import { COLORS, OUTLINE_WIDTH } from './shared/theme.js';
 
@@ -92,6 +93,7 @@ export class CantinaScene extends Phaser.Scene {
     this.cup = this.add.container(0, 0, [this.cupGraphics]).setDepth(DEPTHS.cup);
     this.dice = [this.add.graphics().setDepth(DEPTHS.dice), this.add.graphics().setDepth(DEPTHS.dice)];
     this.lastPhase = null;
+    this.posesAsked = new Set();
 
     // Las medidas salen del stage, nunca de la ventana: él avisa al suscribirse y en cada cambio
     const unsubscribeStage = this.stage.subscribe((layout) => this.useLayout(layout));
@@ -151,10 +153,21 @@ export class CantinaScene extends Phaser.Scene {
     drawCup(this.cupGraphics.clear(), this.props.cup.width, this.props.cup.height);
   }
 
+  // Las caras de reacción solo salen al terminar una ronda: se piden al empezar la partida,
+  // y solo las de los personajes que juegan, para no gastar datos de más. Cuando llegan se
+  // vuelve a dibujar el personaje, por si ya tocaba usarlas.
+  requestPoses(game) {
+    const characters = game.players.map((_, seat) => characterIndexFor(seat));
+    if (!queuePortraitPoses(this, characters, this.posesAsked)) return;
+    this.load.once('complete', () => this.showCharacter(this.store.get().game));
+    this.load.start();
+  }
+
   sync(snapshot, { animate = true } = {}) {
     if (!this.area) return;
     const { game } = snapshot;
     const inGame = Boolean(game);
+    if (inGame) this.requestPoses(game);
     // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
     this.tweens.killTweensOf(this.cup);
     this.paintOverlays(inGame);
@@ -277,11 +290,20 @@ export class CantinaScene extends Phaser.Scene {
   }
 
   // Muestra al jugador en turno sentado al otro lado de la mesa, centrado sobre ella.
-  // Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó.
   showCharacter(game) {
-    const index = this.characterSlot(game);
-    const key = index >= 0 ? portraitKey(characterIndexFor(index)) : null;
-    if (!key || !this.textures.exists(key) || !this.props) {
+    const who = this.characterOnScreen(game);
+    const seat = who ? game.players.findIndex((p) => p.id === who.playerId) : -1;
+    if (seat < 0 || !this.props) {
+      this.hideCharacter();
+      return;
+    }
+
+    // Si la cara de reacción todavía no terminó de cargar, se queda la neutral
+    const character = characterIndexFor(seat);
+    const key = [portraitKey(character, who.pose), portraitKey(character)].find((name) =>
+      this.textures.exists(name),
+    );
+    if (!key) {
       this.hideCharacter();
       return;
     }
@@ -319,11 +341,11 @@ export class CantinaScene extends Phaser.Scene {
     this.characterShadow.clear();
   }
 
-  characterSlot(game) {
-    if (!game) return -1;
-    if (game.currentPlayerId) return game.players.findIndex((p) => p.id === game.currentPlayerId);
-    if (game.winnerId) return game.players.findIndex((p) => p.id === game.winnerId);
-    const loserId = game.round.result?.loserId;
-    return loserId ? game.players.findIndex((p) => p.id === loserId) : -1;
+  // Quién se queda en pantalla y con qué cara: durante la ronda, el jugador en turno;
+  // al terminarla, quien se llevó la reacción (lo decide src/app/reaction.js).
+  characterOnScreen(game) {
+    if (!game) return null;
+    if (game.currentPlayerId) return { playerId: game.currentPlayerId, pose: 'neutral' };
+    return roundReaction(game);
   }
 }

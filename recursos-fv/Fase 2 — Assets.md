@@ -104,10 +104,14 @@ Peru, playing a dice bluffing game. Transparent background. No text, no logos.
 
 ### Variantes de expresión
 
-- [ ] `cantina-personaje-1-descubierto.png` a `-4-descubierto.png`: lo pillaron mintiendo
-- [ ] `cantina-personaje-1-descubre.png` a `-4-descubre.png`: pilló al mentiroso
+- [x] `cantina-personaje-1-descubierto.webp` a `-4-descubierto.webp`: lo pillaron mintiendo
+- [x] `cantina-personaje-1-descubre.webp` a `-4-descubre.webp`: pilló al mentiroso
 
-Mismo tamaño y formato que los personajes. **Adjunta la hoja original** (`recursos-fv/graficos/Personajes_Caricaturescos_en_Cuadrícula.png`) en el mismo chat y genera una hoja por expresión, con los personajes en el mismo orden.
+Hechas el 2026-10-22. Las hojas están en `recursos-fv/graficos/personajes/`. Ojo con los nombres,
+que quedaron cruzados: "Cuatro retratos cómicos de vergüenza" es la de **descubierto** y
+"Personajes_Cuando lo pillan mintiendo" es la de **descubre**.
+
+Mismo tamaño y formato que los personajes. **Adjunta la hoja original** (`recursos-fv/graficos/personajes/Personajes_Caricaturescos_en_Cuadrícula.png`) en el mismo chat y genera una hoja por expresión, con los personajes en el mismo orden.
 
 Descubierto:
 
@@ -133,6 +137,22 @@ New expression: just CAUGHT SOMEONE ELSE LYING at a dice bluffing game, triumpha
 4. Bus driver: big belly laugh, one fist raised, toothpick pointing up.
 ```
 
+### Cómo se recortan las tres hojas
+
+No basta con partir cada hoja en cuatro: ChatGPT dibuja los personajes a distinta escala y
+altura en cada hoja, y si cada recorte se ajusta por su cuenta, la cara pega un salto al
+cambiar de expresión. El script alinea las tres hojas entre sí (busca la escala y el
+desplazamiento con que más se solapan las siluetas), toma la caja que abarca las tres poses
+—así ni un brazo levantado ni un dedo señalando quedan cortados— y aplica el mismo encuadre
+a las tres. Se corre desde la raíz con `pip install pillow numpy av`, y rehace también las
+neutrales, así que las tres quedan siempre a la misma escala:
+
+```
+python "recursos-fv/scripts/recortar-personajes.py"
+```
+
+Si se agregan los personajes 5 a 8, cambiar el rango del script y repetir.
+
 ## 4. Cubilete y marco (opcionales)
 
 Hoy se dibujan en código y ya se ven bien. Si quieres que se parezcan más al logo (cuero con greca), puedes hacerlos:
@@ -149,7 +169,18 @@ Carpeta `src/assets/audio/`, formato OGG (si solo consigues MP3 o WAV, Claude lo
 - [x] `sfx-destapar.ogg` · levantar el cubilete
 - [x] `sfx-cholada.ogg` · sonido cómico de error
 - [x] `sfx-boton.ogg` · clic suave de madera
+- [x] `sfx-creo.ogg` · choque de vasos al creer (menos de 0,5 s)
+- [x] `sfx-descubierto.ogg` · golpe dramático al pillar a un mentiroso
+- [x] `sfx-pierde-ronda.ogg` · remate que baja al perder la ronda
+- [x] `sfx-eliminado.ogg` · remate largo al quedar eliminado
+- [x] `sfx-gana-partida.ogg` · remate que sube al ganar la partida
 - [ ] `musica-cantina.ogg` · bucle instrumental andino tranquilo (opcional)
+- [ ] Ambiente de cantina en bucle (hay candidatos en `recursos-fv/sonidos-candidatos/`, falta decidir si entra)
+
+Los cinco de arriba salieron de `recursos-fv/sonidos-candidatos/`, donde quedan las otras
+opciones (A, B y C) por si alguna suena mejor: cambiar uno es copiar el OGG elegido sobre el
+que está en `src/assets/audio/`, volver a sacar su MP3 y ajustar su volumen en el mapa
+`VOLUME` de `src/app/audio.js`.
 
 Dónde conseguirlos gratis y con licencia libre:
 

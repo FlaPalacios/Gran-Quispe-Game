@@ -69,9 +69,13 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 
 **Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase) y `turnStartedAt` (desde cuándo corre el reloj de presión). Textos visibles: `t('clave', params)` de `src/i18n/index.js`.
 
-**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx('shake' | 'thud' | 'reveal' | 'cholada' | 'click')`, con silencio recordado en localStorage. `connectGameSounds(store)` escucha los cambios de fase y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
+**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx('shake' | 'thud' | 'reveal' | 'cholada' | 'click' | 'believe' | 'caught' | 'loss' | 'eliminated' | 'win')`, con silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
 
 **Personajes (`src/app/characters.js`):** reparte un personaje por jugador según su posición en la lista. Lo usan la tarjeta HTML (avatar) y la escena (personaje grande), para que siempre muestren a la misma persona. Si hay más jugadores que personajes, se repiten.
+
+Cada personaje tiene tres caras (`POSES`): `neutral`, `caught` (`-descubierto`: lo pillaron mintiendo o se quinceó) y `gloating` (`-descubre`: pilló al mentiroso, o ganó la partida). Las tres están recortadas con la misma escala y el mismo encuadre (`recursos-fv/scripts/recortar-personajes.py`), así que cambiar de cara no mueve al personaje. Las dos de reacción no entran en la carga inicial: se piden al empezar la partida y solo para los personajes que juegan; si todavía no llegaron, se usa la neutral.
+
+**Reacción al terminar la ronda (`src/app/reaction.js`):** `roundReaction(game)` devuelve quién se queda en pantalla, con qué cara y qué remate suena. Lo usan la escena y los sonidos, para que la cara y el sonido no puedan contar cosas distintas.
 
 **Depurar en el navegador:** en `npm run dev`, `window.__game` (Phaser) y `window.__store` están disponibles en la consola.
 
@@ -111,7 +115,8 @@ src/
     safeArea.js        # mide las zonas seguras del teléfono
     audio.js           # efectos de sonido y silencio
     gameSounds.js      # qué suena en cada cambio de fase
-    characters.js      # qué personaje le toca a cada jugador
+    characters.js      # qué personaje le toca a cada jugador, y sus caras
+    reaction.js        # quién reacciona al terminar la ronda, con qué cara y qué sonido
     preferences.js     # silencio y siluetas, guardados entre partidas
   scenes/              # CantinaScene, BarScene, AndinoScene
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
@@ -246,6 +251,8 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 - [x] Mesa en primera persona: solo se ve al jugador en turno, sentado al otro lado; los demás van con su avatar en las tarjetas. Ilustrado a color por defecto, o en silueta con la opción "Personajes en sombra" del panel
 - [x] Avatares reales en las tarjetas de jugador
 - [x] Efectos de sonido (agitar, golpe, destapar, cholada, botón) con botón de silencio
+- [x] Sonidos de cada desenlace: creer, pillar a un mentiroso, perder la ronda, quedar eliminado y ganar la partida
+- [x] Caras de reacción de los personajes al terminar la ronda (descubierto y descubre)
 - [x] Imágenes en WebP: 2 MB menos de descarga (los PNG quedan en `recursos-fv/graficos/png-originales/`)
 - [ ] Música: la compone Flavio en FL Studio (`musica-cantina.ogg`)
 
