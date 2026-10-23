@@ -102,6 +102,37 @@ Peru, playing a dice bluffing game. Transparent background. No text, no logos.
 - Para los personajes 5 a 8, adjunta la hoja anterior y pide "same style and scale as the attached characters".
 - Si no sale transparente, pide "plain white background": con el contorno negro se quita fácil.
 
+### Variantes de expresión
+
+- [ ] `cantina-personaje-1-descubierto.png` a `-4-descubierto.png`: lo pillaron mintiendo
+- [ ] `cantina-personaje-1-descubre.png` a `-4-descubre.png`: pilló al mentiroso
+
+Mismo tamaño y formato que los personajes. **Adjunta la hoja original** (`recursos-fv/graficos/Personajes_Caricaturescos_en_Cuadrícula.png`) en el mismo chat y genera una hoja por expresión, con los personajes en el mismo orden.
+
+Descubierto:
+
+```
+Same 4 characters, same art style, scale, outfits and 2x2 grid positions as the attached
+image. Waist-up, facing the viewer. Transparent background. No text, no logos.
+New expression: just CAUGHT LYING at a dice bluffing game, embarrassed and panicking.
+1. Kid: nervous guilty grin, hand scratching the back of his head, a sweat drop.
+2. Grandmother: glasses slipping down her nose, hand on her chest, fake innocent "who, me?" face.
+3. Office worker: pulling his loosened tie, sweating, awkward forced smile.
+4. Bus driver: toothpick falling from his open mouth, eyes wide, eyebrows up.
+```
+
+Descubre al mentiroso:
+
+```
+Same 4 characters, same art style, scale, outfits and 2x2 grid positions as the attached
+image. Waist-up, facing the viewer. Transparent background. No text, no logos.
+New expression: just CAUGHT SOMEONE ELSE LYING at a dice bluffing game, triumphant and mocking.
+1. Kid: pointing at the viewer and laughing out loud.
+2. Grandmother: glasses gleaming, wagging her index finger, smug "I knew it" smile.
+3. Office worker: confident fist pump, satisfied smirk.
+4. Bus driver: big belly laugh, one fist raised, toothpick pointing up.
+```
+
 ## 4. Cubilete y marco (opcionales)
 
 Hoy se dibujan en código y ya se ven bien. Si quieres que se parezcan más al logo (cuero con greca), puedes hacerlos:

@@ -49,15 +49,26 @@ describe('tableProps', () => {
         });
 
         it('los dados caen sobre el paño, al lado opuesto del cubilete', () => {
-          const gap = dice.size * 0.75;
           const half = dice.size / 2;
           for (const sign of [-1, 1]) {
             for (const corner of [-half, half]) {
-              expect(insideFelt(felt, dice.x + sign * gap + corner, dice.y + half)).toBeLessThan(1);
-              expect(insideFelt(felt, dice.x + sign * gap + corner, dice.y - half)).toBeLessThan(1);
+              expect(insideFelt(felt, dice.x + sign * dice.gap + corner, dice.y + half)).toBeLessThan(1);
+              expect(insideFelt(felt, dice.x + sign * dice.gap + corner, dice.y - half)).toBeLessThan(1);
             }
           }
           expect(dice.x).toBeLessThan(cup.aside.x);
+        });
+
+        it('al destapar a medias, el cubilete se levanta por la derecha y los dados quedan en el paño', () => {
+          const { peekDice } = table;
+          expect(cup.peek.angle).toBeLessThan(0);
+          expect(cup.peek.y).toBeLessThan(cup.rest.y);
+          const half = peekDice.size / 2;
+          for (const sign of [-1, 1]) {
+            expect(insideFelt(felt, peekDice.x + sign * (peekDice.gap + half), peekDice.y + half)).toBeLessThan(1);
+          }
+          // Asoman bajo el cubilete, no al otro lado de la mesa
+          expect(Math.abs(peekDice.x - cup.rest.x)).toBeLessThan(cup.width / 2);
         });
       });
     }

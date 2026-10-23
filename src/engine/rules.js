@@ -94,12 +94,12 @@ export function getActivePlayers(state) {
   return state.players.filter((p) => !p.eliminated);
 }
 
-// Solo quien abrió la ronda ve los dados, y únicamente antes de su primer canto.
+// Solo quien acaba de tirar ve los dados, y únicamente antes de cantar.
 // Al terminar la ronda se destapan para todos si alguien desconfió,
 // o en una Cholada si la variante "Destapar en Cholada" está activa.
 export function canSeeDice(state, playerId) {
   if (state.phase === PHASES.ROUND_OVER || state.phase === PHASES.GAME_OVER) return state.round.result.revealed;
-  return state.phase === PHASES.CALL && state.round.calls.length === 0 && playerId === state.round.openerId;
+  return state.phase === PHASES.CALL && playerId === state.currentPlayerId;
 }
 
 // --- Acciones ---
@@ -140,8 +140,8 @@ function believe(state, action) {
   if (getLastCall(state).value === QUISPE) {
     return endRound(state, { type: RESULTS.CHOLADA, reason: CHOLADA_REASONS.BELIEVED_QUISPE, loserId: action.playerId });
   }
-  // Recibe el cubilete a ciegas y le toca cantar más alto
-  return { ...state, phase: PHASES.CALL };
+  // Recibe el cubilete, vuelve a tirar y le toca cantar más alto que la jugada anterior
+  return { ...state, phase: PHASES.ROLL };
 }
 
 function doubt(state, action) {

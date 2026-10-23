@@ -3,7 +3,7 @@
 // También lleva quién confirmó la pantalla "pásale el celular" (viewerId) y desde cuándo
 // (turnStartedAt, para el reloj de presión): eso es estado de la interfaz, no del juego,
 // por eso no vive en el motor.
-import { PHASES, applyAction, createGame } from '../engine/rules.js';
+import { PHASES, applyAction, canSeeDice, createGame } from '../engine/rules.js';
 import { clearSave, saveGame } from '../storage/localSave.js';
 
 export function createGameStore({ rng = Math.random, save = saveGame, clear = clearSave, now = Date.now } = {}) {
@@ -11,6 +11,7 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
   let viewerId = null;
   let turnStartedAt = null;
   const listeners = new Set();
+  const signalListeners = new Set();
 
   const snapshot = () => ({ game, viewerId, turnStartedAt });
   const notify = () => listeners.forEach((fn) => fn(snapshot()));
@@ -58,6 +59,17 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
       notify();
     },
 
+    // Señales de la interfaz que no cambian el estado ni se guardan (por ejemplo, 'cupShake':
+    // sacudir el cubilete antes de tirar). Las escuchan la escena y los sonidos.
+    signal(name) {
+      signalListeners.forEach((fn) => fn(name));
+    },
+
+    onSignal(fn) {
+      signalListeners.add(fn);
+      return () => signalListeners.delete(fn);
+    },
+
     // Sale al menú sin borrar la partida guardada
     leave() {
       game = null;
@@ -77,4 +89,10 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
 export function needsPassScreen({ game, viewerId }) {
   if (!game || !game.currentPlayerId) return false;
   return viewerId !== game.currentPlayerId;
+}
+
+// Los dados se muestran solo si el motor lo permite a quien tiene el celular,
+// y nunca detrás de la pantalla de pase
+export function viewerCanSeeDice(snapshot) {
+  return Boolean(snapshot.game) && canSeeDice(snapshot.game, snapshot.viewerId) && !needsPassScreen(snapshot);
 }

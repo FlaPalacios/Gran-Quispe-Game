@@ -35,6 +35,7 @@ function rollAs(state, playerId, dice) {
 }
 
 const act = (state, type, playerId, value) => applyAction(state, { type, playerId, value });
+const believeAndRoll = (state, playerId, dice) => rollAs(act(state, 'BELIEVE', playerId), playerId, dice);
 
 // Congela en profundidad para detectar mutaciones
 function deepFreeze(obj) {
@@ -102,12 +103,15 @@ describe('flujo de una ronda', () => {
     expect(s.phase).toBe(PHASES.DECIDE);
   });
 
-  it('quien cree recibe el cubilete a ciegas y debe cantar más alto', () => {
+  it('quien cree vuelve a tirar y debe cantar más alto', () => {
     let s = act(rollAs(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 42);
     s = act(s, 'BELIEVE', 'beto');
-    expect(s.phase).toBe(PHASES.CALL);
+    expect(s.phase).toBe(PHASES.ROLL);
     expect(s.currentPlayerId).toBe('beto');
-    expect(s.round.dice).toEqual([4, 2]); // los dados no cambian
+    s = rollAs(s, 'beto', [5, 1]);
+    expect(s.phase).toBe(PHASES.CALL);
+    expect(s.round.dice).toEqual([5, 1]); // los dados son los de su tirada
+    expect(getLastCall(s)).toEqual({ playerId: 'ana', value: 42 }); // la jugada a superar se mantiene
     s = act(s, 'CALL', 'beto', 51);
     expect(s.phase).toBe(PHASES.DECIDE);
     expect(s.currentPlayerId).toBe('cata');
@@ -133,9 +137,10 @@ describe('flujo de una ronda', () => {
     expect(() => act(decide, 'CALL', 'beto', 51)).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
     expect(() => rollAs(decide, 'beto', [1, 1])).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
     expect(() => act(decide, 'NEXT_ROUND')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
-    const blindCall = act(decide, 'BELIEVE', 'beto');
-    expect(() => act(blindCall, 'CALL', 'ana', 51)).toThrow(expect.objectContaining({ code: 'NOT_YOUR_TURN' }));
-    expect(() => act(blindCall, 'DOUBT', 'beto')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
+    const believed = act(decide, 'BELIEVE', 'beto');
+    expect(() => rollAs(believed, 'ana', [1, 1])).toThrow(expect.objectContaining({ code: 'NOT_YOUR_TURN' }));
+    expect(() => act(believed, 'CALL', 'beto', 51)).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
+    expect(() => act(believed, 'DOUBT', 'beto')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
   });
 
   it('ROLL exige rng inyectado', () => {
@@ -145,8 +150,9 @@ describe('flujo de una ronda', () => {
   it('no muta el estado recibido en ninguna acción', () => {
     const decide = deepFreeze(act(rollAs(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 42));
     expect(() => act(decide, 'DOUBT', 'beto')).not.toThrow();
-    const blindCall = deepFreeze(act(decide, 'BELIEVE', 'beto'));
-    expect(() => act(blindCall, 'CALL', 'beto', 31)).not.toThrow(); // Cholada
+    const believed = deepFreeze(act(decide, 'BELIEVE', 'beto'));
+    const rolled = deepFreeze(rollAs(believed, 'beto', [3, 1]));
+    expect(() => act(rolled, 'CALL', 'beto', 31)).not.toThrow(); // Cholada
     const roundOver = deepFreeze(act(decide, 'DOUBT', 'beto'));
     expect(() => act(roundOver, 'NEXT_ROUND')).not.toThrow();
   });
@@ -200,16 +206,23 @@ describe('desconfiar', () => {
 
   it('se compara contra el último que cantó, no contra quien abrió', () => {
     let s = act(rollAs(newGame(), 'ana', [5, 4]), 'CALL', 'ana', 42);
-    s = act(act(s, 'BELIEVE', 'beto'), 'CALL', 'beto', 110);
+    s = act(believeAndRoll(s, 'beto', [5, 4]), 'CALL', 'beto', 110);
     s = act(s, 'DOUBT', 'cata');
     expect(s.round.result).toMatchObject({ loserId: 'beto', callerId: 'beto', doubterId: 'cata', actual: 54 });
+  });
+
+  it('al desconfiar se destapan los dados de la última tirada, no los de quien abrió', () => {
+    let s = act(rollAs(newGame(), 'ana', [6, 6]), 'CALL', 'ana', 42);
+    s = act(believeAndRoll(s, 'beto', [3, 1]), 'CALL', 'beto', 43);
+    s = act(s, 'DOUBT', 'cata');
+    expect(s.round.result).toMatchObject({ loserId: 'beto', dice: [3, 1], actual: 31 });
   });
 });
 
 describe('Cholada', () => {
   it('cantar más bajo que la jugada anterior pierde la ronda sin destapar', () => {
     let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 62);
-    s = act(act(s, 'BELIEVE', 'beto'), 'CALL', 'beto', 54);
+    s = act(believeAndRoll(s, 'beto', [3, 1]), 'CALL', 'beto', 54);
     expect(s.round.result).toMatchObject({ type: RESULTS.CHOLADA, reason: CHOLADA_REASONS.LOWER_CALL, loserId: 'beto', call: 54 });
     expect(s.round.calls).toHaveLength(1);
     // Sin destape: nadie ve los dados
@@ -219,7 +232,7 @@ describe('Cholada', () => {
 
   it('cantar la misma jugada también es Cholada', () => {
     let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 62);
-    s = act(act(s, 'BELIEVE', 'beto'), 'CALL', 'beto', 62);
+    s = act(believeAndRoll(s, 'beto', [3, 1]), 'CALL', 'beto', 62);
     expect(s.round.result).toMatchObject({ type: RESULTS.CHOLADA, loserId: 'beto' });
   });
 });
@@ -315,8 +328,8 @@ describe('modos y fin de partida', () => {
       const s = newGame({ players: PLAYERS.slice(0, 2) });
       return { ...s, players: s.players.map((p) => (p.id === 'beto' ? { ...p, letters: 5 } : p)) };
     };
-    let cholada = act(act(rollAs(lastLetter(), 'ana', [4, 2]), 'CALL', 'ana', 42), 'BELIEVE', 'beto');
-    cholada = act(cholada, 'CALL', 'beto', 31);
+    let cholada = act(rollAs(lastLetter(), 'ana', [4, 2]), 'CALL', 'ana', 42);
+    cholada = act(believeAndRoll(cholada, 'beto', [4, 2]), 'CALL', 'beto', 31);
     expect(cholada).toMatchObject({ phase: PHASES.GAME_OVER, winnerId: 'ana' });
 
     let quispe = act(rollAs(lastLetter(), 'ana', [4, 2]), 'CALL', 'ana', QUISPE);
@@ -330,14 +343,17 @@ describe('modos y fin de partida', () => {
 });
 
 describe('canSeeDice', () => {
-  it('solo quien abre ve los dados, antes de su primer canto', () => {
+  it('solo quien acaba de tirar ve los dados, antes de cantar', () => {
     let s = rollAs(newGame(), 'ana', [4, 2]);
     expect(canSeeDice(s, 'ana')).toBe(true);
     expect(canSeeDice(s, 'beto')).toBe(false);
     s = act(s, 'CALL', 'ana', 42);
     expect(canSeeDice(s, 'ana')).toBe(false);
     s = act(s, 'BELIEVE', 'beto');
-    expect(canSeeDice(s, 'beto')).toBe(false);
+    expect(canSeeDice(s, 'beto')).toBe(false); // todavía no tira
+    s = rollAs(s, 'beto', [5, 1]);
+    expect(canSeeDice(s, 'beto')).toBe(true);
+    expect(canSeeDice(s, 'ana')).toBe(false);
   });
 
   it('al terminar la ronda se destapan para todos', () => {
@@ -385,7 +401,7 @@ describe('variantes', () => {
 
   it('Destapar en Cholada: muestra los dados al hacer Cholada', () => {
     let s = act(rollAs(newGame({ variants: { revealOnCholada: { enabled: true } } }), 'ana', [3, 1]), 'CALL', 'ana', 62);
-    s = act(act(s, 'BELIEVE', 'beto'), 'CALL', 'beto', 54);
+    s = act(believeAndRoll(s, 'beto', [3, 1]), 'CALL', 'beto', 54);
     expect(s.round.result).toMatchObject({ type: RESULTS.CHOLADA, revealed: true, dice: [3, 1], actual: 31 });
     expect(canSeeDice(s, 'cata')).toBe(true);
   });
@@ -402,8 +418,8 @@ describe('variantes', () => {
     const variants = { pressureClock: { enabled: true } };
     const decide = act(rollAs(newGame({ variants }), 'ana', [4, 2]), 'CALL', 'ana', 42);
     expect(() => act(decide, 'TIMEOUT', 'cata')).toThrow(expect.objectContaining({ code: 'NOT_YOUR_TURN' }));
-    const blindCall = act(decide, 'BELIEVE', 'beto');
-    expect(() => act(blindCall, 'TIMEOUT', 'beto')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
+    const believed = act(decide, 'BELIEVE', 'beto');
+    expect(() => act(believed, 'TIMEOUT', 'beto')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
   });
 
   it('Reloj de presión desactivado: TIMEOUT se rechaza', () => {

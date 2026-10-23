@@ -5,6 +5,7 @@ import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
 import { PHASES, RESULTS, canSeeDice, getLastCall } from '../engine/rules.js';
 import { t } from '../i18n/index.js';
+import { RollButton } from './RollButton.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 import { formatCall, lossUnit, modeName, playerName } from './format.js';
@@ -56,12 +57,14 @@ function turnCard(snapshot, current, store) {
   const last = getLastCall(game);
   switch (game.phase) {
     case PHASES.ROLL:
-      return panel(t('game.turnOf', { name: current.name }), t('game.roll.hint'));
-    case PHASES.CALL:
-      if (last) return panel(t('game.call.blindTitle'), t('game.call.blindHint', { call: formatCall(last.value) }));
       return panel(
-        t('game.call.openTitle'),
-        t('game.call.openHint'),
+        t('game.turnOf', { name: current.name }),
+        last ? t('game.roll.believedHint', { call: formatCall(last.value) }) : t('game.roll.hint'),
+      );
+    case PHASES.CALL:
+      return panel(
+        t('game.call.title'),
+        last ? t('game.call.raiseHint', { call: formatCall(last.value) }) : t('game.call.openHint'),
         // Los dados solo están dibujados en el canvas: se repiten en texto para lectores de pantalla
         canSeeDice(game, viewerId) && h('span', { class: 'sr-only' }, diceText(game.round.dice)),
       );
@@ -121,8 +124,21 @@ function resultCard(game) {
 function actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
   const send = (type) => () => store.dispatch({ type, playerId: current?.id });
   switch (game.phase) {
-    case PHASES.ROLL:
-      return h('div', { class: 'actions' }, h('button', { class: 'btn btn--primary btn--big', onClick: send('ROLL') }, t('game.roll')));
+    case PHASES.ROLL: {
+      // Solo si sigue siendo la misma tirada: el turno pudo cambiar mientras se sacudía
+      const stillRolling = () => {
+        const { game: now } = store.get();
+        return now?.phase === PHASES.ROLL && now.currentPlayerId === current.id;
+      };
+      return h(
+        'div',
+        { class: 'actions' },
+        RollButton({
+          onShake: () => stillRolling() && store.signal('cupShake'),
+          onThrow: () => stillRolling() && send('ROLL')(),
+        }),
+      );
+    }
     case PHASES.CALL:
       return h('div', { class: 'actions' }, h('button', { class: 'btn btn--primary btn--big', onClick: onOpenCalls }, t('game.call')));
     case PHASES.DECIDE:

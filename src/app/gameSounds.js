@@ -3,23 +3,27 @@
 import { PHASES, RESULTS } from '../engine/rules.js';
 import { playSfx } from './audio.js';
 
-const SHAKE_TO_THUD_MS = 650;
+// El sonido de sacudir dura más que una sacudida: no se reinicia antes de este tiempo
+const SHAKE_SOUND_EVERY_MS = 550;
 
 export function connectGameSounds(store) {
   let previous = null;
-  let pendingThud = null;
+  let lastShakeAt = 0;
+
+  const unsubscribeSignals = store.onSignal((name) => {
+    if (name !== 'cupShake' || Date.now() - lastShakeAt < SHAKE_SOUND_EVERY_MS) return;
+    lastShakeAt = Date.now();
+    playSfx('shake');
+  });
 
   const unsubscribe = store.subscribe(({ game }) => {
     const before = previous;
     previous = game;
-    // Si la partida cambió de fase (o se salió al menú), el golpe pendiente ya no corresponde
-    clearTimeout(pendingThud);
     if (!game || !before || before.phase === game.phase) return;
 
-    // Agitar el cubilete y apoyarlo en la mesa
+    // Se soltó el botón Tirar: el cubilete golpea la mesa (la sacudida ya sonó mientras tanto)
     if (before.phase === PHASES.ROLL && game.phase === PHASES.CALL) {
-      playSfx('shake');
-      pendingThud = setTimeout(() => playSfx('thud'), SHAKE_TO_THUD_MS);
+      playSfx('thud');
       return;
     }
 
@@ -29,7 +33,7 @@ export function connectGameSounds(store) {
   });
 
   return () => {
-    clearTimeout(pendingThud);
+    unsubscribeSignals();
     unsubscribe();
   };
 }

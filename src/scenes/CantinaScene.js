@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { characterIndexFor, portraitKey } from '../app/characters.js';
-import { needsPassScreen } from '../app/gameStore.js';
+import { needsPassScreen, viewerCanSeeDice } from '../app/gameStore.js';
 import { getPreference } from '../app/preferences.js';
-import { PHASES, canSeeDice } from '../engine/rules.js';
+import { PHASES } from '../engine/rules.js';
 import { KEYS, preloadCantina } from './shared/assets.js';
 import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
 import { COLORS, OUTLINE_WIDTH } from './shared/theme.js';
@@ -19,10 +19,13 @@ const DEPTHS = {
   shadow: -20,
   character: -10, // detrás de la mesa: ella le tapa la cintura
   table: 0,
-  dice: 10,
   cup: 20,
+  dice: 25, // delante del cubilete: al levantarlo a medias asoman por la abertura
   edge: 30,
 };
+
+// Destapado del todo al terminar la ronda: el cubilete se corre a un lado e inclinado
+const ASIDE_ANGLE = -14;
 
 // Fuera del marco no pasa nada, así que el fondo se apaga casi por completo
 const BACKDROP_DIM = 0.8;
@@ -93,9 +96,11 @@ export class CantinaScene extends Phaser.Scene {
     // Las medidas salen del stage, nunca de la ventana: él avisa al suscribirse y en cada cambio
     const unsubscribeStage = this.stage.subscribe((layout) => this.useLayout(layout));
     const unsubscribe = this.store.subscribe((snapshot) => this.sync(snapshot));
+    const unsubscribeSignals = this.store.onSignal((name) => name === 'cupShake' && this.shakeCup());
     this.events.once('shutdown', () => {
       unsubscribeStage();
       unsubscribe();
+      unsubscribeSignals();
       // La forma de la máscara no está en la lista de dibujo: hay que soltarla a mano
       mask.destroy();
       this.maskShape.destroy();
@@ -148,7 +153,7 @@ export class CantinaScene extends Phaser.Scene {
 
   sync(snapshot, { animate = true } = {}) {
     if (!this.area) return;
-    const { game, viewerId } = snapshot;
+    const { game } = snapshot;
     const inGame = Boolean(game);
     // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
     this.tweens.killTweensOf(this.cup);
@@ -163,40 +168,63 @@ export class CantinaScene extends Phaser.Scene {
       return;
     }
 
-    const showDice = canSeeDice(game, viewerId) && !needsPassScreen(snapshot);
+    const showDice = viewerCanSeeDice(snapshot);
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
     this.lastPhase = game.phase;
 
-    this.cup.setPosition(this.props.cup.rest.x, this.props.cup.rest.y).setAngle(0);
+    const { rest, height } = this.props.cup;
+    const pose = this.cupPose(game);
+    this.cup.setPosition(rest.x, rest.y).setAngle(0);
     // Los valores solo se dibujan si este jugador puede verlos: así la jugada real
     // no queda pintada en el canvas durante la pantalla de pase ni mientras otro decide
-    this.drawDice(showDice ? game.round.dice : null);
+    this.drawDice(showDice ? game.round.dice : null, this.diceSpot(game));
 
     if (animate && justRolled) {
-      this.tweens.chain({
-        targets: this.cup,
-        tweens: [
-          { angle: { from: -10, to: 10 }, duration: 90, yoyo: true, repeat: 3, ease: 'Sine.easeInOut' },
-          { angle: 0, duration: 60 },
-          {
-            ...this.props.cup.aside,
-            angle: -14,
-            duration: 320,
-            ease: 'Back.easeOut',
-            onStart: () => this.revealDice(),
-          },
-        ],
-      });
+      // Al soltar Tirar: golpe contra la mesa y, tras una pausa, se levanta a medias para mirar
+      const slam = [
+        { y: rest.y - height * 0.12, duration: 70, ease: 'Quad.easeOut' },
+        { y: rest.y, duration: 90, ease: 'Quad.easeIn' },
+      ];
+      const lift = { ...pose, delay: 220, duration: 380, ease: 'Back.easeOut', onComplete: () => this.revealDice() };
+      this.tweens.chain({ targets: this.cup, tweens: showDice ? [...slam, lift] : slam });
       return;
     }
 
-    this.dice.forEach((d) => d.setVisible(showDice));
     if (!showDice) return;
     if (animate) {
-      this.tweens.add({ targets: this.cup, ...this.props.cup.aside, angle: -14, duration: 320, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: this.cup, ...pose, duration: 320, ease: 'Back.easeOut', onComplete: () => this.revealDice() });
     } else {
-      this.cup.setPosition(this.props.cup.aside.x, this.props.cup.aside.y).setAngle(-14);
+      this.cup.setPosition(pose.x, pose.y).setAngle(pose.angle);
+      this.dice.forEach((d) => d.setVisible(true));
     }
+  }
+
+  // Mientras se canta, quien tiró levanta el cubilete solo a medias para que nadie más vea;
+  // al terminar la ronda se destapa del todo
+  cupPose(game) {
+    const { peek, aside } = this.props.cup;
+    return game.phase === PHASES.CALL ? peek : { ...aside, angle: ASIDE_ANGLE };
+  }
+
+  diceSpot(game) {
+    return game.phase === PHASES.CALL ? this.props.peekDice : this.props.dice;
+  }
+
+  // Cada sacudida del botón Tirar. Solo mientras se espera la tirada y con el celular
+  // en manos de quien tira (nunca detrás de la pantalla de pase)
+  shakeCup() {
+    const snapshot = this.store.get();
+    if (!this.props || snapshot.game?.phase !== PHASES.ROLL || needsPassScreen(snapshot)) return;
+    const { rest, height } = this.props.cup;
+    this.tweens.killTweensOf(this.cup);
+    this.cup.setPosition(rest.x, rest.y).setAngle(0);
+    this.tweens.chain({
+      targets: this.cup,
+      tweens: [
+        { angle: { from: -12, to: 12 }, y: rest.y - height * 0.1, duration: 55, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' },
+        { angle: 0, y: rest.y, duration: 50 },
+      ],
+    });
   }
 
   // Oscurecido de las dos capas. En partida se apaga lo que rodea al escenario y el escenario
@@ -227,13 +255,12 @@ export class CantinaScene extends Phaser.Scene {
 
   // Los dados se redibujan siempre que haya tirada, nunca solo se ocultan:
   // así no puede quedar dibujada la jugada de una ronda anterior.
-  drawDice(dice) {
+  drawDice(dice, spot) {
     if (!dice) {
       this.dice.forEach((d) => d.clear());
       return;
     }
-    const { size, x, y } = this.props.dice;
-    const gap = size * 0.75;
+    const { size, gap, x, y } = spot;
     dice.forEach((value, i) => {
       const die = this.dice[i];
       drawDie(die.clear(), size, value);
@@ -244,8 +271,8 @@ export class CantinaScene extends Phaser.Scene {
   // Se consulta de nuevo al destapar, por si el estado cambió durante el agitado
   revealDice() {
     const snapshot = this.store.get();
-    const visible = Boolean(snapshot.game) && canSeeDice(snapshot.game, snapshot.viewerId) && !needsPassScreen(snapshot);
-    if (visible) this.drawDice(snapshot.game.round.dice);
+    const visible = viewerCanSeeDice(snapshot);
+    if (visible) this.drawDice(snapshot.game.round.dice, this.diceSpot(snapshot.game));
     this.dice.forEach((d) => d.setVisible(visible));
   }
 

@@ -63,7 +63,7 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 
 - `createGame({ config, players }, { rng })` crea el estado inicial. `config`: `mode` (`classic` | `lives` | `penalty`), `lives`, `penaltyText`, `variants` (se completa con `resolveVariants` de `variants.js`).
 - `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
-- Fases: `ROLL` → `CALL` → `DECIDE` → (`CALL` si cree) → `ROUND_OVER` → `NEXT_ROUND` → `ROLL`. Termina en `GAME_OVER` con `winnerId`.
+- Fases: `ROLL` → `CALL` → `DECIDE` → (`ROLL` y luego `CALL` si cree) → `ROUND_OVER` → `NEXT_ROUND` → `ROLL`. Termina en `GAME_OVER` con `winnerId`.
 - Resultados de ronda (`state.round.result`): `type` es `DOUBT` o `CHOLADA`. Una Cholada trae `reason`: `LOWER_CALL`, `BELIEVED_QUISPE` o `TIMEOUT`. Todos traen `loserId`, `cost`, `revealed`, `dice`, `actual` y `penaltyText`. Si `revealed` es falso, `dice` y `actual` vienen en `null`.
 - Consultas: `getLastCall`, `getActivePlayers`, `canSeeDice(state, playerId)`. La UI muestra los dados solo si `canSeeDice` lo permite.
 
@@ -153,10 +153,10 @@ Se juega con un cubilete y dos dados.
 
 **Desarrollo de una ronda:**
 
-1. La primera ronda la abre un jugador elegido al azar. Quien abre agita el cubilete, mira sus dados en secreto y canta una jugada (puede mentir). Al abrir, la jugada cantada parte de cero: cualquier jugada es válida.
+1. La primera ronda la abre un jugador elegido al azar. Quien abre sacude el cubilete (botón Tirar: se mantiene presionado o se toca varias veces y al soltar caen los dados), lo levanta a medias para mirar sus dados en secreto y canta una jugada (puede mentir). Al abrir, la jugada cantada parte de cero: cualquier jugada es válida.
 2. El siguiente jugador en el orden de giro decide:
-   - **Cree:** recibe el cubilete **a ciegas** (no ve los dados, no vuelve a tirar) y debe cantar una jugada **estrictamente más alta** que la anterior. Luego lo pasa al siguiente, que vuelve a decidir. Los dados no cambian durante toda la ronda.
-   - **Desconfía:** se destapa el cubilete y se compara la jugada real con la última cantada. Si la real es **igual o mayor**, pierde quien desconfió. Si es menor, pierde quien cantó.
+   - **Cree:** recibe el cubilete, **vuelve a tirar**, mira sus dados en secreto y debe cantar una jugada **estrictamente más alta** que la anterior (puede mentir). Luego lo pasa al siguiente, que vuelve a decidir. (Decidido el 2026-10-21; antes recibía el cubilete a ciegas sin tirar.)
+   - **Desconfía:** se destapa el cubilete y se compara la jugada real (los dados de la última tirada) con la última cantada. Si la real es **igual o mayor**, pierde quien desconfió. Si es menor, pierde quien cantó.
 3. **Cholada** (una equivocación; en pantalla: "¡Cholada!" con un subtítulo según el motivo). Pierde la ronda sin destapar, costando 1, quien:
    - cree y canta una jugada igual o más baja que la anterior ("Te has quinceao");
    - cree un Quispe, porque no hay nada más alto que cantar, aunque no fuera cierto ("Nada le gana al Quispe");

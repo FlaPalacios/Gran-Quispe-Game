@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createGameStore, needsPassScreen } from './gameStore.js';
+import { createGameStore, needsPassScreen, viewerCanSeeDice } from './gameStore.js';
 
 const SETUP = {
   config: { mode: 'classic' },
@@ -47,7 +47,32 @@ describe('gameStore', () => {
 
     store.confirmViewer('beto');
     store.dispatch({ type: 'BELIEVE', playerId: 'beto' });
-    expect(needsPassScreen(store.get())).toBe(false); // canta a ciegas sin pasar el celular
+    expect(needsPassScreen(store.get())).toBe(false); // vuelve a tirar sin pasar el celular
+  });
+
+  it('los dados se ven solo con el celular en manos de quien acaba de tirar', () => {
+    const { store } = newStore(0.5, 0.2);
+    store.start(SETUP);
+    store.confirmViewer('ana');
+    expect(viewerCanSeeDice(store.get())).toBe(false); // todavía no tira
+    store.dispatch({ type: 'ROLL', playerId: 'ana' });
+    expect(viewerCanSeeDice(store.get())).toBe(true);
+    store.leave();
+    expect(viewerCanSeeDice(store.get())).toBe(false);
+  });
+
+  it('las señales de la interfaz llegan a quien escucha y no tocan el estado', () => {
+    const { store } = newStore();
+    store.start(SETUP);
+    const before = store.get();
+    const heard = vi.fn();
+    const stop = store.onSignal(heard);
+    store.signal('cupShake');
+    expect(heard).toHaveBeenCalledWith('cupShake');
+    expect(store.get()).toEqual(before);
+    stop();
+    store.signal('cupShake');
+    expect(heard).toHaveBeenCalledTimes(1);
   });
 
   it('el turno empieza al confirmar el pase y se reinicia al cambiar de jugador o de partida', () => {

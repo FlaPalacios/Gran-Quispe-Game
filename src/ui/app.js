@@ -17,9 +17,10 @@ export function mountApp(root, store) {
     render();
   });
 
-  // Un solo punto para el clic de todos los botones, en vez de repetirlo en cada componente
+  // Un solo punto para el clic de todos los botones, en vez de repetirlo en cada componente.
+  // El botón Tirar no: ya suena el cubilete al sacudir
   root.addEventListener('click', (e) => {
-    if (e.target.closest('button')) playSfx('click');
+    if (e.target.closest('button:not(.btn--hold)')) playSfx('click');
   });
 
   function render() {

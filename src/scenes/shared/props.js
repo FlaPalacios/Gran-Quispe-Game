@@ -69,14 +69,28 @@ export function tableProps(area) {
   // El último tope del alto es el canto lejano de la mesa: así el cubilete no asoma por
   // detrás ni se le cruza por delante a quien está sentado al otro lado
   const height = Math.min(felt.height * 0.95, felt.width * 0.26, (rest.y - table.top) * 0.95);
+  const width = height * 0.85;
+
+  // Destapado a medias para mirar los dados sin que los demás los vean: el cubilete gira
+  // sobre la esquina izquierda de su base y se levanta por la derecha (como en la vida real)
+  const tilt = (PEEK_ANGLE * Math.PI) / 180;
+  const half = width / 2;
+  const peek = { x: rest.x - half + half * Math.cos(tilt), y: rest.y + half * Math.sin(tilt), angle: PEEK_ANGLE };
+  const diceSize = height * 0.42;
+  const peekSize = height * 0.32;
 
   return {
     ...table,
-    cup: { width: height * 0.85, height, rest, aside },
+    cup: { width, height, rest, aside, peek },
     // Los dados caen al lado opuesto, donde el cubilete ya no los tapa
-    dice: { size: height * 0.42, x: felt.x - felt.width * 0.16, y: felt.y + felt.height * 0.18 },
+    dice: { size: diceSize, gap: diceSize * 0.75, x: felt.x - felt.width * 0.16, y: felt.y + felt.height * 0.18 },
+    // Al destapar a medias se asoman por la abertura, delante del cubilete
+    peekDice: { size: peekSize, gap: peekSize * 0.6, x: rest.x + width * 0.14, y: rest.y - peekSize * 0.4 },
   };
 }
+
+// Grados que se inclina el cubilete al mirar los dados
+const PEEK_ANGLE = -26;
 
 // Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
 // Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
