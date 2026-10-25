@@ -2,7 +2,7 @@
 // Sin Phaser, sin DOM, sin localStorage, sin Math.random directo:
 // el azar se inyecta (ctx.rng) para poder testear y, a futuro, correrlo en el servidor.
 import { CHOLADA_REASONS, PHASES, RESULTS } from './constants.js';
-import { QUISPE, compareCalls, isValidCall, readDice, rollDice } from './dice.js';
+import { QUISPE, compareCalls, isValidCall, isWrittenCall, readDice, rollDice } from './dice.js';
 import { DEFAULT_LIVES, MAX_LIVES, MIN_LIVES, getMode } from './modes.js';
 import { lossCost, resolveVariants, revealsDice } from './variants.js';
 
@@ -114,8 +114,21 @@ function roll(state, action, { rng } = {}) {
 function call(state, action) {
   assertPhase(state, PHASES.CALL);
   assertTurn(state, action.playerId);
-  if (!isValidCall(action.value)) {
+  // Lo que no es ni un número entero no viene de un jugador, sino de un error de programación
+  if (!Number.isInteger(action.value)) {
     throw new GameRuleError('INVALID_CALL', `Jugada inválida: ${action.value}`);
+  }
+  // Cantar un número que no existe en la escala es equivocarse, y equivocarse es Cholada.
+  // `asNumber` lo manda el teclado, donde el jugador escribe la jugada dígito a dígito:
+  // escrito así, el 21 tampoco vale, porque el Quispe se canta por su nombre.
+  const valid = action.asNumber ? isWrittenCall(action.value) : isValidCall(action.value);
+  if (!valid) {
+    return endRound(state, {
+      type: RESULTS.CHOLADA,
+      reason: CHOLADA_REASONS.INVALID_NUMBER,
+      loserId: action.playerId,
+      call: action.value,
+    });
   }
   const last = getLastCall(state);
   if (last && compareCalls(action.value, last.value) <= 0) {

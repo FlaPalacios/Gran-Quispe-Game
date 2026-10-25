@@ -4,25 +4,16 @@ import { avatarFor } from '../app/characters.js';
 import { viewerCanSeeDice } from '../app/gameStore.js';
 import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
-import { PHASES, RESULTS, getLastCall } from '../engine/rules.js';
+import { CHOLADA_REASONS, PHASES, RESULTS, getLastCall } from '../engine/rules.js';
 import { hasText, t } from '../i18n/index.js';
+import { PressureClock } from './PressureClock.js';
 import { RollButton } from './RollButton.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 import { formatCall, lossUnit, modeName, playerName } from './format.js';
 
-// Intervalo del reloj de presión. El plazo no se guarda aquí: sale de turnStartedAt del store,
-// así nunca se arrastra de una partida o un turno anterior.
-let clockInterval = null;
-
-// Se llama antes de cada redibujo; pressureClock lo vuelve a crear si sigue haciendo falta
-export function stopClock() {
-  clearInterval(clockInterval);
-  clockInterval = null;
-}
-
-// callSheetOpen: con la hoja abierta el reloj se dibuja dentro de ella, que la tapa.
-// Solo puede haber uno a la vez, porque el intervalo es único.
+// callSheetOpen: con el teclado (o la hoja) abierto, el reloj se dibuja dentro de él,
+// que tapa el panel de turno. Solo puede haber uno a la vez, porque el intervalo es único.
 export function GameHud({ snapshot, store, callSheetOpen, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
@@ -44,13 +35,14 @@ export function GameHud({ snapshot, store, callSheetOpen, onExit, onOpenCalls, o
     h(
       'div',
       { class: 'zona hud__players' },
-      h('div', { class: 'players' }, game.players.map((p, i) => playerCard(game, p, i))),
+      // Mientras se destapa se dibujan los jugadores como estaban antes de la ronda
+      h('div', { class: 'players' }, (snapshot.playersBefore ?? game.players).map((p, i) => playerCard(game, p, i))),
     ),
     h(
       'section',
       { class: 'zona hud__play' },
       turnCard(snapshot, current, store, !callSheetOpen),
-      actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }),
+      actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }),
     ),
   );
 }
@@ -70,7 +62,7 @@ function turnCard(snapshot, current, store, withClock) {
         last ? t('game.call.raiseHint', { call: formatCall(last.value) }) : t('game.call.openHint'),
         // Los dados solo están dibujados en el canvas: se repiten en texto para lectores de pantalla
         viewerCanSeeDice(snapshot) && h('span', { class: 'sr-only' }, diceText(game.round.dice)),
-        withClock && pressureClock(snapshot, store),
+        withClock && PressureClock(snapshot, store),
       );
     case PHASES.DECIDE:
       return h(
@@ -84,11 +76,12 @@ function turnCard(snapshot, current, store, withClock) {
           ' ',
           h('span', { class: 'call-chip' }, formatCall(last.value)),
         ),
-        withClock && pressureClock(snapshot, store),
+        withClock && PressureClock(snapshot, store),
       );
     case PHASES.ROUND_OVER:
     case PHASES.GAME_OVER:
-      return resultCard(game);
+      // Mientras sube el cubilete no se adelanta nada de lo que pasó
+      return snapshot.revealing ? panel(t('game.revealing'), t('game.revealing.hint')) : resultCard(game);
     default:
       return null;
   }
@@ -111,6 +104,11 @@ function resultCard(game) {
   } else if (result.revealed) {
     lines.push(t('result.revealed', { actual: formatCall(result.actual) }));
   }
+  // En la Cholada por un número que no existe, lo que se escribió no se ve en ningún otro
+  // sitio: sin esto el jugador no sabe en qué se equivocó
+  if (result.reason === CHOLADA_REASONS.INVALID_NUMBER) {
+    lines.unshift(t('result.cholada.called', { call: result.call }));
+  }
   lines.push(t('result.loses', { name: loser.name, cost: result.cost, unit: lossUnit(game.config.mode, result.cost) }));
   if (loser.eliminated) lines.push(t('result.eliminated', { name: loser.name }));
 
@@ -125,7 +123,10 @@ function resultCard(game) {
   );
 }
 
-function actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
+function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
+  const { game } = snapshot;
+  // Destapando no hay nada que hacer todavía: ni seguir a la ronda siguiente
+  if (snapshot.revealing) return null;
   const send = (type) => () => store.dispatch({ type, playerId: current?.id });
   switch (game.phase) {
     case PHASES.ROLL: {
@@ -191,36 +192,6 @@ function playerCard(game, player, index) {
   );
 }
 
-// Reloj de presión: corre al cantar y al decidir, que son las dos fases en las que el motor
-// acepta TIMEOUT. Se dibuja en un solo sitio a la vez (el panel de turno o la hoja).
-function pressureClock({ game, turnStartedAt }, store) {
-  const { pressureClock: variant } = game.config.variants;
-  if (!variant.enabled || turnStartedAt == null) return null;
-  if (game.phase !== PHASES.CALL && game.phase !== PHASES.DECIDE) return null;
-
-  const total = variant.seconds * 1000;
-  const deadline = turnStartedAt + total;
-  const label = h('span', { class: 'timer__label' });
-  const bar = h('span', { class: 'timer__bar' });
-  const tick = () => {
-    const remaining = Math.max(0, deadline - Date.now());
-    label.textContent = t('game.timeLeft', { s: Math.ceil(remaining / 1000) });
-    bar.style.width = `${(remaining / total) * 100}%`;
-    return remaining;
-  };
-  tick();
-  stopClock();
-  const { currentPlayerId: playerId, phase } = game;
-  clockInterval = setInterval(() => {
-    if (tick() > 0) return;
-    stopClock();
-    // Solo si sigue siendo el mismo momento (el motor también lo valida)
-    const { game: now } = store.get();
-    if (now?.phase === phase && now.currentPlayerId === playerId) store.dispatch({ type: 'TIMEOUT', playerId });
-  }, 200);
-  return h('div', { class: 'timer', role: 'timer' }, h('span', { class: 'timer__track' }, bar), label);
-}
-
 // Hoja inferior para elegir la jugada. Se ofrecen todas, incluso las más bajas:
 // cantar igual o menos que la anterior es una Cholada y forma parte del juego.
 export function CallSheet({ snapshot, store, onPick, onCancel }) {
@@ -239,7 +210,7 @@ export function CallSheet({ snapshot, store, onPick, onCancel }) {
       { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'sheet-title' },
       h('h2', { class: 'sheet__title', id: 'sheet-title', tabindex: '-1', 'data-autofocus': true }, t('game.pickCall')),
       // La hoja tapa el panel de turno: el reloj se sigue viendo aquí
-      pressureClock(snapshot, store),
+      PressureClock(snapshot, store),
       h('div', { class: 'call-grid' }, numbers.map((v) => option(v)), option(QUISPE, ' call-option--quispe')),
       h('button', { class: 'btn btn--light', onClick: onCancel }, t('game.cancel')),
     ),

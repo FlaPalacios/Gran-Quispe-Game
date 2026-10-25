@@ -62,14 +62,16 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 **API del motor (`src/engine/rules.js`):**
 
 - `createGame({ config, players }, { rng })` crea el estado inicial. `config`: `mode` (`classic` | `lives` | `penalty`), `lives`, `penaltyText`, `variants` (se completa con `resolveVariants` de `variants.js`).
-- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`; `TIMEOUT` vale en las fases `CALL` y `DECIDE`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
+- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`, y `asNumber: true` si el jugador escribió el número en el teclado: es el único campo de una acción que cambia una regla, así que en el modo online de la Fase 5 el servidor tendrá que decidir si se fía de él o guarda el modo de entrada en la configuración de la partida), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`; `TIMEOUT` vale en las fases `CALL` y `DECIDE`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
 - Fases: `ROLL` → `CALL` → `DECIDE` → (`ROLL` y luego `CALL` si cree) → `ROUND_OVER` → `NEXT_ROUND` → `ROLL`. Termina en `GAME_OVER` con `winnerId`.
-- Resultados de ronda (`state.round.result`): `type` es `DOUBT` o `CHOLADA`. Una Cholada trae `reason`: `LOWER_CALL`, `BELIEVED_QUISPE` o `TIMEOUT`. Todos traen `loserId`, `cost`, `revealed`, `dice`, `actual` y `penaltyText`. Si `revealed` es falso, `dice` y `actual` vienen en `null`.
+- Resultados de ronda (`state.round.result`): `type` es `DOUBT` o `CHOLADA`. Una Cholada trae `reason`: `LOWER_CALL`, `INVALID_NUMBER`, `BELIEVED_QUISPE` o `TIMEOUT`. Todos traen `loserId`, `cost`, `revealed`, `dice`, `actual` y `penaltyText`. Si `revealed` es falso, `dice` y `actual` vienen en `null`.
 - Consultas: `getLastCall`, `getActivePlayers`, `canSeeDice(state, playerId)`. La UI muestra los dados solo si `canSeeDice` lo permite.
 
-**Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase) y `turnStartedAt` (desde cuándo corre el reloj de presión). Textos visibles: `t('clave', params)` de `src/i18n/index.js`.
+**Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase), `turnStartedAt` (desde cuándo corre el reloj de presión) y `revealing` (el cubilete todavía se está levantando).
 
-**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx(clave)` con las claves de la tabla `SFX` (`shake`, `thud`, `reveal`, `cholada`, `click`, `start`, `believe`, `loss`, `eliminated`, `win`, `cheer` y las tres risas), y silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y la señal `gameStart` (solo al empezar una partida; continuar una guardada entra en silencio) y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. Su `stingFor()` traduce el desenlace que da `reaction.js` en los efectos que suenan, que en dos casos son dos a la vez. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
+**El suspenso del destape (`revealing`):** al desconfiar no se muestra nada del resultado hasta que el cubilete termina de subir. Mientras dura: los dados no se dibujan (`viewerCanSeeDice` devuelve falso), el panel dice "Destapando…", no hay botones, la tarjeta de quien perdió se dibuja todavía sin el castigo y en la mesa se queda quien desconfió, con cara de nada. Al terminar aparecen a la vez los dados, el resultado, la cara de reacción y el sonido. El plazo es lo que dura el sonido del destape (`sfxDuration('reveal')`, que `main.js` le inyecta al store) con un respaldo de 2,2 s; si el sonido está silenciado, la espera ocurre igual. Textos visibles: `t('clave', params)` de `src/i18n/index.js`.
+
+**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** suena por **Web Audio**, porque un elemento `<audio>` tarda hasta medio segundo en arrancar en el celular y el golpe del cubilete tiene que caer a tiempo; los archivos se decodifican una vez y cada toque es un nodo nuevo. Si el navegador no trae Web Audio se usan elementos `<audio>`. `playSfx(clave)` con las claves de la tabla `SFX` (`shake`, `thud`, `reveal`, `cholada`, `click`, `start`, `believe`, `loss`, `eliminated`, `win`, `cheer` y las tres risas), y silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y la señal `gameStart` (solo al empezar una partida; continuar una guardada entra en silencio) y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. Su `stingFor()` traduce el desenlace que da `reaction.js` en los efectos que suenan (al pillar a un mentiroso, una risa al azar de tres; al ganar la partida, dos a la vez). No usa Phaser, porque el sonido también lo dispara la UI en HTML.
 
 **Personajes (`src/app/characters.js`):** reparte un personaje por jugador según su posición en la lista. Lo usan la tarjeta HTML (avatar) y la escena (personaje grande), para que siempre muestren a la misma persona. Si hay más jugadores que personajes, se repiten.
 
@@ -124,6 +126,9 @@ src/
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
   dev/                 # galería de assets (solo desarrollo)
   ui/                  # app.js (enrutador), MainMenu, RulesPanel, PassDeviceScreen, GameHud, styles.css
+    CallKeypad.js      # teclado para cantar (por defecto); CallSheet es la lista completa
+    PressureClock.js   # el reloj, compartido por el panel de turno y el teclado
+    PlayIntro.js       # entrada en túnel al empezar la partida
   assets/
     images/{cantina,bar,andino,shared}/
     audio/
@@ -167,6 +172,7 @@ Se juega con un cubilete y dos dados.
    - **Desconfía:** se destapa el cubilete y se compara la jugada real (los dados de la última tirada) con la última cantada. Si son **exactamente la misma**, pierde quien desconfió. Si no, pierde quien cantó: haber sacado más también es mentir. (Decidido el 2026-10-24; antes se salvaba quien cantaba si sacaba igual o más.)
 3. **Cholada** (una equivocación; en pantalla: "¡Cholada!", con un subtítulo cuando el motivo lo tiene). Pierde la ronda sin destapar, costando 1, quien:
    - cree y canta una jugada igual o más baja que la anterior (sin subtítulo);
+   - canta un número que no existe en la escala, por ejemplo 66, 161 o 24 ("Esa jugada no existe"). Escrito en el teclado, el 21 tampoco existe: el Quispe se canta con su botón, no diciendo "veintiuno";
    - cree un Quispe, porque no hay nada más alto que cantar, aunque no fuera cierto ("Nada le gana al Quispe");
    - con el reloj de presión activo, no canta o no decide a tiempo ("Se acabó tu tiempo").
 4. Quien pierde recibe el castigo del modo y **abre la ronda siguiente**, con la jugada cantada otra vez en cero. Si quedó eliminado, abre el siguiente jugador activo en el orden de giro.
@@ -197,7 +203,7 @@ Se juega con un cubilete y dos dados.
 
 ## Alcance del MVP
 
-**Funcional:** modo "un solo celular" con pantalla "pásale el celular"; panel de configuración (modo, variantes, 2 a 8 jugadores, escenario, texto de castigo); bots con personalidad configurable; guardado local de la partida en curso que expira a la hora.
+**Funcional:** modo "un solo celular" con pantalla "pásale el celular"; panel de configuración (modo, variantes, 2 a 8 jugadores, escenario, texto de castigo) y preferencias de pantalla que no son reglas y valen para todas las partidas (`src/app/preferences.js`: silencio, personajes en sombra y teclado simple para cantar); bots con personalidad configurable; guardado local de la partida en curso que expira a la hora.
 
 **Idioma:** por ahora solo español. Todo texto visible sale de `src/i18n/es.json` desde el inicio, para sumar inglés y términos en quechua más adelante sin tocar código. El selector de idioma del wireframe queda oculto hasta entonces.
 
@@ -257,6 +263,9 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 - [x] Sonidos de cada desenlace: creer, pillar a un mentiroso, perder la ronda, quedar eliminado y ganar la partida
 - [x] Voces y ambiente grabados por Flavio: empezar la partida, destapar, la risa de la Cholada, tres risas al pillar a un mentiroso, el brindis, ganar y quedar eliminado
 - [x] Caras de reacción de los personajes al terminar la ronda (descubierto y descubre)
+- [x] Teclado para cantar, con el Quispe aparte (late cuando de verdad lo tienes) y "cantar lo que salió"
+- [x] Suspenso al destapar: el resultado espera a que el cubilete termine de subir
+- [x] Entrada en túnel al empezar la partida, con el sonido de la cerveza
 - [x] Imágenes en WebP: 2 MB menos de descarga (los PNG quedan en `recursos-fv/graficos/png-originales/`)
 - [ ] Música: la compone Flavio en FL Studio (`musica-cantina.ogg`)
 

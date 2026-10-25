@@ -29,6 +29,18 @@ describe('roundReaction', () => {
     expect(roundReaction(act(roll(game, 'ana', [4, 2]), 'CALL', 'ana', 42))).toBe(null);
   });
 
+  it('mientras sube el cubilete se queda quien desconfió, sin reacción todavía', () => {
+    const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
+    const over = act(called, 'DOUBT', 'beto');
+    expect(roundReaction(over, { revealing: true })).toEqual({
+      playerId: 'beto',
+      pose: 'neutral',
+      sound: null,
+    });
+    // Y al terminar, la reacción de siempre
+    expect(roundReaction(over).pose).toBe('caught');
+  });
+
   it('al pillar a un mentiroso se queda él, avergonzado', () => {
     const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
     expect(roundReaction(act(called, 'DOUBT', 'beto'))).toEqual({

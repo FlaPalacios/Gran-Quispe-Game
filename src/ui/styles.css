@@ -869,3 +869,181 @@ p {
   border-bottom: var(--borde-grueso) solid var(--color-borde);
   border-radius: 24px;
 }
+
+/* ---------- Teclado para cantar ---------- */
+
+/* Entra entero en la zona de juego de un celular en vertical, sin desplazar: pantallita,
+   tres filas de teclas y el atajo de cantar lo que salió. */
+.keypad {
+  gap: 0.5rem;
+  padding: 0.75rem 12px 12px;
+}
+
+/* Pantallita: a la izquierda salir, al centro lo que se va escribiendo */
+.keypad__screen {
+  display: grid;
+  grid-template-columns: var(--tactil-min) 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.keypad__value {
+  display: grid;
+  justify-items: center;
+  min-height: var(--tactil-min);
+  padding: 0.1rem 0.5rem;
+  background: var(--color-papel);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 12px;
+}
+
+.keypad__label {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  opacity: 0.65;
+}
+
+.keypad__display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+}
+
+/* Los puntos de "todavía no has escrito nada" van aquí y no en el texto, para que no se los
+   lea un lector de pantalla */
+.keypad__display:empty::after {
+  content: '···';
+  opacity: 0.3;
+}
+
+.keypad__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.keypad__key {
+  min-height: var(--tactil-min);
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.35rem;
+}
+
+/* Las dos que cierran la jugada van en su propia fila, lejos de los dígitos: cantar no
+   tiene vuelta atrás y un dedo gordo no debería hacerlo por error. */
+.keypad__quispe,
+.keypad__call {
+  grid-column: span 2;
+  min-height: var(--tactil-min);
+  font-size: 1.1rem;
+}
+
+/* El Quispe no se escribe, se canta por su nombre. Se enciende y late solo cuando de verdad
+   lo tienes en la mano; elegirlo lo deja marcado hasta confirmar con Cantar. */
+.keypad__quispe {
+  color: var(--color-texto);
+  font-family: var(--font-display);
+  font-weight: 900;
+  background: var(--color-campo);
+}
+
+.keypad__quispe.is-now {
+  color: var(--color-fondo);
+  background: var(--color-retablo-dorado);
+  animation: latir-quispe 1.2s ease-in-out infinite;
+}
+
+.keypad__quispe.is-picked {
+  outline: var(--borde-grueso) solid var(--color-retablo-dorado);
+  outline-offset: 2px;
+}
+
+@keyframes latir-quispe {
+  50% {
+    transform: scale(1.06);
+    box-shadow: var(--sombra-solida), 0 0 18px 5px color-mix(in srgb, var(--color-retablo-dorado) 60%, transparent);
+  }
+}
+
+.keypad__call:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+
+.keypad__actual {
+  min-height: var(--tactil-min);
+  font-size: 0.95rem;
+}
+
+/* Pantallas bajas (el teléfono en horizontal): se encoge la letra, nunca el área táctil.
+   Si aun así no cabe, la hoja se desplaza, que es mejor que una tecla de 40 px. */
+:root[data-juego='compacta'] .keypad__key {
+  font-size: 1.15rem;
+}
+
+:root[data-juego='compacta'] .keypad__display {
+  font-size: 1.3rem;
+}
+
+:root[data-juego='compacta'] .keypad__label {
+  display: none;
+}
+
+/* ---------- Entrada de la partida ---------- */
+
+/* Arranca en negro y se abre como un túnel mientras suena la cerveza */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.intro__hole {
+  width: 0;
+  height: 0;
+  margin-top: 8vh;
+  border-radius: 50%;
+  /* El negro de alrededor vive en la sombra: al crecer el agujero, se va abriendo */
+  box-shadow: 0 0 0 100vmax var(--color-fondo);
+  animation: abrir-tunel 1.5s cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+@keyframes abrir-tunel {
+  from {
+    width: 0;
+    height: 0;
+  }
+  to {
+    width: 220vmax;
+    height: 220vmax;
+  }
+}
+
+@keyframes apagar-intro {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Sin animaciones: el túnel se cambia por un fundido corto, y el Quispe solo cambia de color */
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    background: var(--color-fondo);
+    animation: apagar-intro 0.4s linear forwards;
+  }
+
+  .intro__hole {
+    display: none;
+  }
+
+  .keypad__quispe.is-now {
+    animation: none;
+  }
+}

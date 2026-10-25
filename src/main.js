@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { preloadSfx } from './app/audio.js';
+import { preloadSfx, sfxDuration } from './app/audio.js';
 import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
 import { createStage } from './app/stage.js';
@@ -9,7 +9,8 @@ import { AndinoScene } from './scenes/AndinoScene.js';
 import { COLORS, FONTS, toCss } from './scenes/shared/theme.js';
 import { mountApp } from './ui/app.js';
 
-const store = createGameStore();
+// El suspenso del destape dura lo que dure su sonido
+const store = createGameStore({ revealMs: () => sfxDuration('reveal') });
 // Calcula las zonas de la pantalla y las publica como variables CSS para el HUD
 const stage = createStage(store);
 connectGameSounds(store);

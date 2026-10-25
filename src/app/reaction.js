@@ -4,12 +4,17 @@
 import { PHASES, RESULTS } from '../engine/rules.js';
 
 /**
- * @returns {{playerId: string, pose: 'caught'|'gloating', sound: string|null}|null}
+ * @param {{revealing?: boolean}} [options] si el cubilete todavía se está levantando
+ * @returns {{playerId: string, pose: 'neutral'|'caught'|'gloating', sound: string|null}|null}
  *   null mientras la ronda sigue en juego.
  */
-export function roundReaction(game) {
+export function roundReaction(game, { revealing = false } = {}) {
   const result = game?.round?.result;
   if (!result) return null;
+
+  // Mientras sube el cubilete nadie ha reaccionado todavía: se queda a la vista quien
+  // desconfió, con cara de nada, mirando cómo se destapa.
+  if (revealing) return { playerId: result.doubterId ?? result.loserId, pose: 'neutral', sound: null };
 
   const won = game.phase === PHASES.GAME_OVER;
   const doubted = result.type === RESULTS.DOUBT;

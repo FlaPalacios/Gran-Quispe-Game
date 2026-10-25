@@ -104,6 +104,123 @@ describe('gameStore', () => {
     expect(store.get().turnStartedAt).toBe(9000);
   });
 
+  describe('el suspenso del destape', () => {
+    // Deja la partida con ana cantando 65 y beto a punto de decidir
+    const aboutToDoubt = (revealMs) => {
+      const store = createGameStore({ rng: sequence(0, 0.5, 0.2), save: vi.fn(), clear: vi.fn(), revealMs });
+      store.start(SETUP);
+      store.dispatch({ type: 'ROLL', playerId: 'ana' });
+      store.dispatch({ type: 'CALL', playerId: 'ana', value: 65 });
+      store.confirmViewer('beto');
+      return store;
+    };
+
+    it('al desconfiar no se ve nada hasta que el cubilete termina de subir', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 2000);
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        expect(store.get().revealing).toBe(true);
+        expect(viewerCanSeeDice(store.get())).toBe(false); // destapado para el motor, pero todavía no en pantalla
+        vi.advanceTimersByTime(1999);
+        expect(store.get().revealing).toBe(true);
+        vi.advanceTimersByTime(1);
+        expect(store.get().revealing).toBe(false);
+        expect(viewerCanSeeDice(store.get())).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('avisa a los suscritos al empezar y al terminar el destape', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 1000);
+        const heard = [];
+        store.subscribe(({ revealing }) => heard.push(revealing));
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        expect(heard).toEqual([true]);
+        vi.advanceTimersByTime(1000);
+        expect(heard).toEqual([true, false]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('sin saber cuánto dura el sonido, espera su plazo de respaldo', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => null);
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        vi.advanceTimersByTime(2199);
+        expect(store.get().revealing).toBe(true);
+        vi.advanceTimersByTime(1);
+        expect(store.get().revealing).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('una Cholada sin destape no hace esperar a nadie', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 2000);
+        store.dispatch({ type: 'BELIEVE', playerId: 'beto' });
+        store.dispatch({ type: 'ROLL', playerId: 'beto' });
+        store.dispatch({ type: 'CALL', playerId: 'beto', value: 31 }); // más bajo: Cholada
+        expect(store.get().game.round.result.revealed).toBe(false);
+        expect(store.get().revealing).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('las tarjetas se publican como estaban antes de la ronda, sin tocar la aritmética', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 2000);
+        const antes = store.get().game.players;
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        expect(store.get().playersBefore).toEqual(antes);
+        expect(store.get().game.players).not.toEqual(antes); // el motor ya cobró el castigo
+        vi.advanceTimersByTime(2000);
+        expect(store.get().playersBefore).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('empezar otra partida corta el destape a medias', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 2000);
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        store.start(SETUP);
+        expect(store.get().revealing).toBe(false);
+        expect(store.get().playersBefore).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('salir al menú corta el destape a medias', () => {
+      vi.useFakeTimers();
+      try {
+        const store = aboutToDoubt(() => 2000);
+        store.dispatch({ type: 'DOUBT', playerId: 'beto' });
+        store.leave();
+        expect(store.get().revealing).toBe(false);
+        // El aviso pendiente ya no dice nada de una partida que no existe
+        const heard = vi.fn();
+        store.subscribe(heard);
+        vi.advanceTimersByTime(3000);
+        expect(heard).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
   it('no pide pase al terminar la ronda y borra el guardado al terminar la partida', () => {
     const { store, clear } = newStore(0.5, 0.2);
     store.start({ ...SETUP, config: { mode: 'lives', lives: 1 } });

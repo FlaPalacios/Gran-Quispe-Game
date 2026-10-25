@@ -35,6 +35,8 @@ function rollAs(state, playerId, dice) {
 }
 
 const act = (state, type, playerId, value) => applyAction(state, { type, playerId, value });
+// Cantar escribiendo el número en el teclado, en vez de elegirlo de la lista
+const type_ = (state, playerId, value) => applyAction(state, { type: 'CALL', playerId, value, asNumber: true });
 const believeAndRoll = (state, playerId, dice) => rollAs(act(state, 'BELIEVE', playerId), playerId, dice);
 
 // Congela en profundidad para detectar mutaciones
@@ -117,9 +119,10 @@ describe('flujo de una ronda', () => {
     expect(s.currentPlayerId).toBe('cata');
   });
 
-  it('rechaza jugadas inválidas', () => {
+  it('cantar un número que no existe no es un error, es Cholada', () => {
     const s = rollAs(newGame(), 'ana', [4, 2]);
-    expect(() => act(s, 'CALL', 'ana', 24)).toThrow(GameRuleError);
+    expect(act(s, 'CALL', 'ana', 24).phase).toBe(PHASES.ROUND_OVER);
+    expect(() => act(s, 'CALL', 'ana', 'veinticuatro')).toThrow(GameRuleError);
   });
 
   it('rechaza acciones fuera de turno o de fase', () => {
@@ -234,6 +237,46 @@ describe('desconfiar', () => {
 });
 
 describe('Cholada', () => {
+  it('cantar un número que no existe en la escala pierde la ronda sin destapar', () => {
+    const rolled = rollAs(newGame(), 'ana', [4, 2]);
+    for (const value of [66, 161, 24, 100, 7]) {
+      const s = act(rolled, 'CALL', 'ana', value);
+      expect(s.round.result, `cantó ${value}`).toMatchObject({
+        type: RESULTS.CHOLADA,
+        reason: CHOLADA_REASONS.INVALID_NUMBER,
+        loserId: 'ana',
+        call: value,
+        cost: 1,
+        revealed: false,
+      });
+      expect(s.round.calls).toHaveLength(0);
+    }
+  });
+
+  it('escrito en el teclado, el 21 tampoco es Quispe', () => {
+    const rolled = rollAs(newGame(), 'ana', [2, 1]);
+    expect(type_(rolled, 'ana', QUISPE).round.result).toMatchObject({
+      type: RESULTS.CHOLADA,
+      reason: CHOLADA_REASONS.INVALID_NUMBER,
+      loserId: 'ana',
+    });
+    // Cantado por su nombre, con su botón, sí vale
+    expect(act(rolled, 'CALL', 'ana', QUISPE).phase).toBe(PHASES.DECIDE);
+  });
+
+  it('escribir cualquier otra jugada de la escala vale igual que elegirla de la lista', () => {
+    const rolled = rollAs(newGame(), 'ana', [4, 2]);
+    expect(type_(rolled, 'ana', 42).phase).toBe(PHASES.DECIDE);
+    expect(type_(rolled, 'ana', 160).phase).toBe(PHASES.DECIDE);
+  });
+
+  it('lo que no es un número entero sigue siendo un error de programación', () => {
+    const rolled = rollAs(newGame(), 'ana', [4, 2]);
+    for (const value of [undefined, null, '42', 4.2, NaN]) {
+      expect(() => act(rolled, 'CALL', 'ana', value)).toThrow(expect.objectContaining({ code: 'INVALID_CALL' }));
+    }
+  });
+
   it('cantar más bajo que la jugada anterior pierde la ronda sin destapar', () => {
     let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 62);
     s = act(believeAndRoll(s, 'beto', [3, 1]), 'CALL', 'beto', 54);

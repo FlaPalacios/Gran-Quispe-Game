@@ -191,7 +191,7 @@ export class CantinaScene extends Phaser.Scene {
 
   sync(snapshot, { animate = true } = {}) {
     if (!this.area) return;
-    const { game } = snapshot;
+    const { game, revealing } = snapshot;
     const inGame = Boolean(game);
     if (inGame) this.requestPoses(game);
     // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
@@ -201,7 +201,7 @@ export class CantinaScene extends Phaser.Scene {
     this.tableImage?.setVisible(inGame);
     this.cup.setVisible(inGame);
     this.dice.forEach((d) => d.setVisible(false));
-    this.showCharacter(game);
+    this.showCharacter(game, revealing);
 
     if (!inGame) {
       this.lastPhase = null;
@@ -209,7 +209,13 @@ export class CantinaScene extends Phaser.Scene {
     }
 
     const showDice = viewerCanSeeDice(snapshot);
+    // El cubilete se levanta también mientras dura el destape, aunque los dados todavía no
+    // se vean: es justo lo que están mirando todos.
+    const opening = showDice || (revealing && game.round.result?.revealed);
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
+    // Solo se anima al cambiar de momento: así el aviso de que terminó el destape no hace
+    // que el cubilete vuelva a su sitio para levantarse de nuevo.
+    const phaseChanged = this.lastPhase !== game.phase;
     this.lastPhase = game.phase;
 
     const { rest, body } = this.props.cup;
@@ -232,13 +238,13 @@ export class CantinaScene extends Phaser.Scene {
       return;
     }
 
-    if (!showDice) return;
-    if (animate) {
+    if (!opening) return;
+    if (animate && phaseChanged) {
       this.tweens.chain({ targets: this.cup, tweens: this.liftTweens(pose) });
     } else {
       this.setCupPose(pose.name);
       this.cup.setPosition(pose.x, pose.y);
-      this.dice.forEach((d) => d.setVisible(true));
+      this.dice.forEach((d) => d.setVisible(showDice));
     }
   }
 
@@ -345,8 +351,8 @@ export class CantinaScene extends Phaser.Scene {
   }
 
   // Muestra al jugador en turno sentado al otro lado de la mesa, centrado sobre ella.
-  showCharacter(game) {
-    const who = this.characterOnScreen(game);
+  showCharacter(game, revealing) {
+    const who = this.characterOnScreen(game, revealing);
     const seat = who ? game.players.findIndex((p) => p.id === who.playerId) : -1;
     if (seat < 0 || !this.props) {
       this.hideCharacter();
@@ -398,9 +404,9 @@ export class CantinaScene extends Phaser.Scene {
 
   // Quién se queda en pantalla y con qué cara: durante la ronda, el jugador en turno;
   // al terminarla, quien se llevó la reacción (lo decide src/app/reaction.js).
-  characterOnScreen(game) {
+  characterOnScreen(game, revealing) {
     if (!game) return null;
     if (game.currentPlayerId) return { playerId: game.currentPlayerId, pose: 'neutral' };
-    return roundReaction(game);
+    return roundReaction(game, { revealing });
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CALL_SCALE, QUISPE, compareCalls, isValidCall, rankOf, readDice, rollDice } from './dice.js';
+import { CALL_SCALE, QUISPE, compareCalls, isValidCall, isWrittenCall, rankOf, readDice, rollDice } from './dice.js';
 
 describe('readDice', () => {
   it('lee primero el dado mayor', () => {
@@ -56,6 +56,16 @@ describe('escala de jugadas', () => {
     expect(isValidCall(24)).toBe(false);
     expect(isValidCall(33)).toBe(false);
     expect(isValidCall(170)).toBe(false);
+  });
+
+  it('el Quispe no se puede cantar escribiendo su número', () => {
+    expect(isValidCall(QUISPE)).toBe(true);
+    expect(isWrittenCall(QUISPE)).toBe(false);
+    // El resto de la escala sí se escribe igual
+    for (const value of CALL_SCALE.filter((v) => v !== QUISPE)) {
+      expect(isWrittenCall(value)).toBe(true);
+    }
+    expect(isWrittenCall(24)).toBe(false);
     expect(() => rankOf(24)).toThrow(RangeError);
   });
 });

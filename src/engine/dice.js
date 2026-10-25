@@ -13,6 +13,12 @@ export function isValidCall(value) {
   return CALL_SCALE.includes(value);
 }
 
+// Las jugadas que se pueden cantar escribiendo el número. El Quispe no está: en la mesa se
+// canta por su nombre, así que decir "veintiuno" no es cantar Quispe.
+export function isWrittenCall(value) {
+  return value !== QUISPE && isValidCall(value);
+}
+
 export function rankOf(value) {
   const rank = CALL_SCALE.indexOf(value);
   if (rank === -1) throw new RangeError(`Jugada inválida: ${value}`);

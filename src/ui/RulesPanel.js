@@ -190,23 +190,28 @@ export function RulesPanel({ draft, onBack, onStart }) {
   function displayCard() {
     return card(
       t('setup.display'),
+      preferenceRow('simpleKeypad'),
+      preferenceRow('silhouettes'),
+    );
+  }
+
+  function preferenceRow(key) {
+    return h(
+      'label',
+      { class: 'variant__row' },
       h(
-        'label',
-        { class: 'variant__row' },
-        h(
-          'span',
-          { class: 'variant__text' },
-          h('strong', {}, t('setup.silhouettes')),
-          h('small', {}, t('setup.silhouettes.description')),
-        ),
-        h('input', {
-          class: 'switch',
-          type: 'checkbox',
-          role: 'switch',
-          checked: getPreference('silhouettes'),
-          onChange: (e) => setPreference('silhouettes', e.target.checked),
-        }),
+        'span',
+        { class: 'variant__text' },
+        h('strong', {}, t(`setup.${key}`)),
+        h('small', {}, t(`setup.${key}.description`)),
       ),
+      h('input', {
+        class: 'switch',
+        type: 'checkbox',
+        role: 'switch',
+        checked: getPreference(key),
+        onChange: (e) => setPreference(key, e.target.checked),
+      }),
     );
   }
 
