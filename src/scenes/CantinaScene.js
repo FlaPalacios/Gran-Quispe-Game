@@ -4,8 +4,8 @@ import { needsPassScreen, viewerCanSeeDice } from '../app/gameStore.js';
 import { getPreference } from '../app/preferences.js';
 import { roundReaction } from '../app/reaction.js';
 import { PHASES } from '../engine/rules.js';
-import { KEYS, preloadCantina, queuePortraitPoses } from './shared/assets.js';
-import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst } from './shared/props.js';
+import { DIE_VALUES, KEYS, dieKey, preloadCantina, queuePortraitPoses } from './shared/assets.js';
+import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst, drawTableShadow, tableProps } from './shared/props.js';
 import { COLORS, OUTLINE_WIDTH } from './shared/theme.js';
 
 // Escenario principal: cantina nocturna cusqueña.
@@ -25,8 +25,9 @@ const DEPTHS = {
   edge: 30,
 };
 
-// Destapado del todo al terminar la ronda: el cubilete se corre a un lado e inclinado
-const ASIDE_ANGLE = -14;
+// El cubilete vectorial de respaldo tiene una sola forma, así que sus poses se hacen
+// girándolo: apenas al espiar, del todo al destapar para la mesa
+const CUP_ANGLES = { closed: 0, peek: -24, open: -62 };
 
 // Fuera del marco no pasa nada, así que el fondo se apaga casi por completo
 const BACKDROP_DIM = 0.8;
@@ -88,10 +89,24 @@ export class CantinaScene extends Phaser.Scene {
       .setVisible(false)
       .setDepth(DEPTHS.character)
       .setMask(mask);
+    // Mesa, cubilete y dados ilustrados. De cada uno hay respaldo vectorial por si falta su
+    // imagen: el juego se ve más pobre, pero se sigue jugando igual.
     this.table = this.add.graphics().setDepth(DEPTHS.table).setMask(mask);
-    this.cupGraphics = this.add.graphics();
-    this.cup = this.add.container(0, 0, [this.cupGraphics]).setDepth(DEPTHS.cup);
-    this.dice = [this.add.graphics().setDepth(DEPTHS.dice), this.add.graphics().setDepth(DEPTHS.dice)];
+    this.tableImage = this.textures.exists(KEYS.table)
+      ? this.add.image(0, 0, KEYS.table).setDepth(DEPTHS.table).setMask(mask)
+      : null;
+
+    // El origen del cubilete es su punto de apoyo en la mesa, el mismo en las tres poses
+    this.cupImage = this.textures.exists(KEYS.cupPoses.closed)
+      ? this.add.image(0, 0, KEYS.cupPoses.closed).setOrigin(0.5, 1)
+      : null;
+    this.cupGraphics = this.cupImage ? null : this.add.graphics();
+    this.cup = this.add.container(0, 0, [this.cupImage ?? this.cupGraphics]).setDepth(DEPTHS.cup);
+
+    this.diceAreImages = DIE_VALUES.every((value) => this.textures.exists(dieKey(value)));
+    this.dice = [0, 1].map(() =>
+      (this.diceAreImages ? this.add.image(0, 0, dieKey(1)) : this.add.graphics()).setDepth(DEPTHS.dice),
+    );
     this.lastPhase = null;
     this.posesAsked = new Set();
 
@@ -149,8 +164,19 @@ export class CantinaScene extends Phaser.Scene {
   // Mesa, cubilete y dados: todas las medidas salen de la zona de la escena (shared/props.js),
   // así el cubilete nunca se sale del paño por mucho que cambie la pantalla.
   measureProps(area) {
-    this.props = drawRoundTable(this.table.clear(), area);
-    drawCup(this.cupGraphics.clear(), this.props.cup.width, this.props.cup.height);
+    this.table.clear();
+    if (this.tableImage) {
+      this.props = tableProps(area);
+      const { x, y, width, height } = this.props;
+      this.tableImage.setDisplaySize(width, height).setPosition(x, y);
+      drawTableShadow(this.table, this.props);
+    } else {
+      this.props = drawRoundTable(this.table, area);
+    }
+
+    const { body, width, height } = this.props.cup;
+    if (this.cupImage) this.cupImage.setDisplaySize(width, height);
+    else drawCup(this.cupGraphics.clear(), body.width, body.height);
   }
 
   // Las caras de reacción solo salen al terminar una ronda: se piden al empezar la partida,
@@ -172,6 +198,7 @@ export class CantinaScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.cup);
     this.paintOverlays(inGame);
     this.table.setVisible(inGame);
+    this.tableImage?.setVisible(inGame);
     this.cup.setVisible(inGame);
     this.dice.forEach((d) => d.setVisible(false));
     this.showCharacter(game);
@@ -185,38 +212,64 @@ export class CantinaScene extends Phaser.Scene {
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
     this.lastPhase = game.phase;
 
-    const { rest, height } = this.props.cup;
+    const { rest, body } = this.props.cup;
     const pose = this.cupPose(game);
     this.cup.setPosition(rest.x, rest.y).setAngle(0);
+    this.setCupPose('closed');
     // Los valores solo se dibujan si este jugador puede verlos: así la jugada real
-    // no queda pintada en el canvas durante la pantalla de pase ni mientras otro decide
+    // no queda a la vista en el canvas durante la pantalla de pase ni mientras otro decide
     this.drawDice(showDice ? game.round.dice : null, this.diceSpot(game));
 
     if (animate && justRolled) {
-      // Al soltar Tirar: golpe contra la mesa y, tras una pausa, se levanta a medias para mirar
+      // Al soltar Tirar: golpe contra la mesa y, tras una pausa, se levanta para mirar
       const slam = [
-        { y: rest.y - height * 0.12, duration: 70, ease: 'Quad.easeOut' },
+        { y: rest.y - body.height * 0.12, duration: 70, ease: 'Quad.easeOut' },
         { y: rest.y, duration: 90, ease: 'Quad.easeIn' },
       ];
-      const lift = { ...pose, delay: 220, duration: 380, ease: 'Back.easeOut', onComplete: () => this.revealDice() };
-      this.tweens.chain({ targets: this.cup, tweens: showDice ? [...slam, lift] : slam });
+      const [lift, ...afterLift] = this.liftTweens(pose);
+      const tweens = showDice ? [...slam, { ...lift, delay: 220 }, ...afterLift] : slam;
+      this.tweens.chain({ targets: this.cup, tweens });
       return;
     }
 
     if (!showDice) return;
     if (animate) {
-      this.tweens.add({ targets: this.cup, ...pose, duration: 320, ease: 'Back.easeOut', onComplete: () => this.revealDice() });
+      this.tweens.chain({ targets: this.cup, tweens: this.liftTweens(pose) });
     } else {
-      this.cup.setPosition(pose.x, pose.y).setAngle(pose.angle);
+      this.setCupPose(pose.name);
+      this.cup.setPosition(pose.x, pose.y);
       this.dice.forEach((d) => d.setVisible(true));
     }
   }
 
   // Mientras se canta, quien tiró levanta el cubilete solo a medias para que nadie más vea;
-  // al terminar la ronda se destapa del todo
+  // al terminar la ronda se vuelca del todo a un lado
   cupPose(game) {
-    const { peek, aside } = this.props.cup;
-    return game.phase === PHASES.CALL ? peek : { ...aside, angle: ASIDE_ANGLE };
+    const { rest, aside } = this.props.cup;
+    return game.phase === PHASES.CALL ? { name: 'peek', ...rest } : { name: 'open', ...aside };
+  }
+
+  // Levantar el cubilete. Al cantar se inclina sin moverse del sitio, porque solo lo mira
+  // quien tiró; al terminar la ronda se vuelca a un lado para que lo vean todos.
+  liftTweens({ name, x, y }) {
+    const { rest, body } = this.props.cup;
+    if (name === 'peek') {
+      return [
+        { y: rest.y - body.height * 0.2, duration: 170, ease: 'Quad.easeOut', onComplete: () => this.setCupPose(name) },
+        { y: rest.y, duration: 190, ease: 'Quad.easeIn', onComplete: () => this.revealDice() },
+      ];
+    }
+    return [
+      { x, y, duration: 320, ease: 'Back.easeOut', onStart: () => this.setCupPose(name), onComplete: () => this.revealDice() },
+    ];
+  }
+
+  // La pose ilustrada es otra imagen; la de respaldo, el mismo cubilete vectorial girado.
+  // Hay que repetir el tamaño: cambiar de textura devuelve el cubilete al tamaño del archivo.
+  setCupPose(name) {
+    const { width, height } = this.props.cup;
+    if (this.cupImage) this.cupImage.setTexture(KEYS.cupPoses[name]).setDisplaySize(width, height);
+    else this.cupGraphics.setAngle(CUP_ANGLES[name]);
   }
 
   diceSpot(game) {
@@ -228,13 +281,14 @@ export class CantinaScene extends Phaser.Scene {
   shakeCup() {
     const snapshot = this.store.get();
     if (!this.props || snapshot.game?.phase !== PHASES.ROLL || needsPassScreen(snapshot)) return;
-    const { rest, height } = this.props.cup;
+    const { rest, body } = this.props.cup;
     this.tweens.killTweensOf(this.cup);
     this.cup.setPosition(rest.x, rest.y).setAngle(0);
+    this.setCupPose('closed');
     this.tweens.chain({
       targets: this.cup,
       tweens: [
-        { angle: { from: -12, to: 12 }, y: rest.y - height * 0.1, duration: 55, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' },
+        { angle: { from: -12, to: 12 }, y: rest.y - body.height * 0.1, duration: 55, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' },
         { angle: 0, y: rest.y, duration: 50 },
       ],
     });
@@ -266,17 +320,18 @@ export class CantinaScene extends Phaser.Scene {
     this.edge.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeRect(x, y, w, h);
   }
 
-  // Los dados se redibujan siempre que haya tirada, nunca solo se ocultan:
-  // así no puede quedar dibujada la jugada de una ronda anterior.
+  // Los dados se rehacen siempre que haya tirada, nunca solo se ocultan:
+  // así no puede quedar a la vista la jugada de una ronda anterior.
   drawDice(dice, spot) {
     if (!dice) {
-      this.dice.forEach((d) => d.clear());
+      this.dice.forEach((die) => (this.diceAreImages ? die.setTexture(dieKey(1)).setVisible(false) : die.clear()));
       return;
     }
-    const { size, gap, x, y } = spot;
+    const { size, height, gap, x, y } = spot;
     dice.forEach((value, i) => {
       const die = this.dice[i];
-      drawDie(die.clear(), size, value);
+      if (this.diceAreImages) die.setTexture(dieKey(value)).setDisplaySize(size, height);
+      else drawDie(die.clear(), size, value);
       die.setPosition(x + (i === 0 ? -gap : gap), y).setAngle(i === 0 ? -8 : 10);
     });
   }

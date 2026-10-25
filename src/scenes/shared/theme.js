@@ -17,6 +17,7 @@ export const COLORS = Object.freeze({
   borde: 0x000000,
   retabloRojo: 0xc23a2b,
   retabloAzul: 0x2f5d9e,
+  pano: 0x205e2a, // paño de la mesa; sale del verde medido en mesa.webp
   retabloDorado: 0xf2c230,
   letraPendiente: 0x4a3a2f,
 });

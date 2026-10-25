@@ -19,6 +19,14 @@ const PLAYER_COUNTS = [2, 8];
 const insideFelt = ({ x, y, width, height }, px, py) =>
   ((px - x) / (width / 2)) ** 2 + ((py - y) / (height / 2)) ** 2;
 
+// Las cuatro esquinas de los dos dados de una tirada
+const corners = ({ size, height, gap, x, y }) =>
+  [-1, 1].flatMap((side) =>
+    [-size / 2, size / 2].flatMap((dx) =>
+      [-height / 2, height / 2].map((dy) => [x + side * gap + dx, y + dy]),
+    ),
+  );
+
 describe('tableProps', () => {
   for (const [width, height] of SIZES) {
     for (const playerCount of PLAYER_COUNTS) {
@@ -35,40 +43,41 @@ describe('tableProps', () => {
           expect(table.top).toBeGreaterThanOrEqual(area.y);
         });
 
-        it('el cubilete se apoya en el paño, tapado y destapado', () => {
-          const half = cup.width / 2;
-          expect(cup.height).toBeGreaterThan(0);
+        it('el cubilete se apoya en el paño, tapado y volcado', () => {
+          const half = cup.body.width / 2;
+          expect(cup.body.height).toBeGreaterThan(0);
           for (const place of [cup.rest, cup.aside]) {
             expect(insideFelt(felt, place.x - half, place.y)).toBeLessThan(1);
             expect(insideFelt(felt, place.x + half, place.y)).toBeLessThan(1);
           }
         });
 
-        it('el cubilete no pasa el canto lejano de la mesa', () => {
-          expect(cup.rest.y - cup.height).toBeGreaterThan(table.top);
+        it('el lienzo del cubilete es más ancho que el cubilete, para las poses inclinadas', () => {
+          expect(cup.width).toBeGreaterThan(cup.body.width);
+          expect(cup.height).toBeGreaterThanOrEqual(cup.body.height);
         });
 
-        it('los dados caen sobre el paño, al lado opuesto del cubilete', () => {
-          const half = dice.size / 2;
-          for (const sign of [-1, 1]) {
-            for (const corner of [-half, half]) {
-              expect(insideFelt(felt, dice.x + sign * dice.gap + corner, dice.y + half)).toBeLessThan(1);
-              expect(insideFelt(felt, dice.x + sign * dice.gap + corner, dice.y - half)).toBeLessThan(1);
-            }
-          }
+        it('el cubilete no pasa el canto lejano de la mesa', () => {
+          expect(cup.rest.y - cup.body.height).toBeGreaterThan(table.top);
+        });
+
+        it('los dados caen enteros sobre el paño, al lado opuesto del cubilete', () => {
+          corners(dice).forEach((point) => expect(insideFelt(felt, ...point)).toBeLessThan(1));
           expect(dice.x).toBeLessThan(cup.aside.x);
         });
 
-        it('al destapar a medias, el cubilete se levanta por la derecha y los dados quedan en el paño', () => {
+        it('los dados se ven bien grandes', () => {
+          // Dos dados y su hueco ocupan buena parte del ancho del paño
+          expect((dice.size * 2 + dice.gap * 2) / felt.width).toBeGreaterThan(0.3);
+          expect(dice.size).toBeGreaterThan(cup.body.width * 0.45);
+        });
+
+        it('al destapar a medias, los dados asoman delante del cubilete y sobre el paño', () => {
           const { peekDice } = table;
-          expect(cup.peek.angle).toBeLessThan(0);
-          expect(cup.peek.y).toBeLessThan(cup.rest.y);
-          const half = peekDice.size / 2;
-          for (const sign of [-1, 1]) {
-            expect(insideFelt(felt, peekDice.x + sign * (peekDice.gap + half), peekDice.y + half)).toBeLessThan(1);
-          }
-          // Asoman bajo el cubilete, no al otro lado de la mesa
-          expect(Math.abs(peekDice.x - cup.rest.x)).toBeLessThan(cup.width / 2);
+          corners(peekDice).forEach((point) => expect(insideFelt(felt, ...point)).toBeLessThan(1));
+          // Asoman junto al cubilete, no al otro lado de la mesa
+          expect(Math.abs(peekDice.x - cup.rest.x)).toBeLessThan(cup.body.width);
+          expect(peekDice.size).toBeLessThan(dice.size);
         });
       });
     }

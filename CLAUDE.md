@@ -62,18 +62,20 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 **API del motor (`src/engine/rules.js`):**
 
 - `createGame({ config, players }, { rng })` crea el estado inicial. `config`: `mode` (`classic` | `lives` | `penalty`), `lives`, `penaltyText`, `variants` (se completa con `resolveVariants` de `variants.js`).
-- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
+- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`; `TIMEOUT` vale en las fases `CALL` y `DECIDE`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
 - Fases: `ROLL` → `CALL` → `DECIDE` → (`ROLL` y luego `CALL` si cree) → `ROUND_OVER` → `NEXT_ROUND` → `ROLL`. Termina en `GAME_OVER` con `winnerId`.
 - Resultados de ronda (`state.round.result`): `type` es `DOUBT` o `CHOLADA`. Una Cholada trae `reason`: `LOWER_CALL`, `BELIEVED_QUISPE` o `TIMEOUT`. Todos traen `loserId`, `cost`, `revealed`, `dice`, `actual` y `penaltyText`. Si `revealed` es falso, `dice` y `actual` vienen en `null`.
 - Consultas: `getLastCall`, `getActivePlayers`, `canSeeDice(state, playerId)`. La UI muestra los dados solo si `canSeeDice` lo permite.
 
 **Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase) y `turnStartedAt` (desde cuándo corre el reloj de presión). Textos visibles: `t('clave', params)` de `src/i18n/index.js`.
 
-**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx('shake' | 'thud' | 'reveal' | 'cholada' | 'click' | 'believe' | 'caught' | 'loss' | 'eliminated' | 'win')`, con silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
+**Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** `playSfx(clave)` con las claves de la tabla `SFX` (`shake`, `thud`, `reveal`, `cholada`, `click`, `start`, `believe`, `loss`, `eliminated`, `win`, `cheer` y las tres risas), y silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y la señal `gameStart` (solo al empezar una partida; continuar una guardada entra en silencio) y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. Su `stingFor()` traduce el desenlace que da `reaction.js` en los efectos que suenan, que en dos casos son dos a la vez. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
 
 **Personajes (`src/app/characters.js`):** reparte un personaje por jugador según su posición en la lista. Lo usan la tarjeta HTML (avatar) y la escena (personaje grande), para que siempre muestren a la misma persona. Si hay más jugadores que personajes, se repiten.
 
 Cada personaje tiene tres caras (`POSES`): `neutral`, `caught` (`-descubierto`: lo pillaron mintiendo o se quinceó) y `gloating` (`-descubre`: pilló al mentiroso, o ganó la partida). Las tres están recortadas con la misma escala y el mismo encuadre (`recursos-fv/scripts/recortar-personajes.py`), así que cambiar de cara no mueve al personaje. Las dos de reacción no entran en la carga inicial: se piden al empezar la partida y solo para los personajes que juegan; si todavía no llegaron, se usa la neutral.
+
+**Mesa, cubilete y dados (`src/scenes/shared/props.js`):** son imágenes, no dibujo por código: la mesa de paño verde, las tres poses del cubilete (`cubilete-tapado`, `-inclinado` para mirar los dados a escondidas y `-volcado` para el destape) y los seis dados. Si alguna falta, la escena dibuja su versión vectorial de respaldo y se sigue jugando. `tableProps(area)` da las medidas: dónde cae el paño dentro de la mesa, dónde se apoya el cubilete y dónde quedan los dados. Esas fracciones salen del recorte, así que si cambia el dibujo de la mesa hay que correr `recursos-fv/scripts/recortar-objetos.py` y copiar los números que imprime. Las tres poses del cubilete comparten lienzo y punto de apoyo (el borde de abajo al centro), por eso cambiar de pose es cambiar de imagen y el cubilete no se mueve de sitio.
 
 **Reacción al terminar la ronda (`src/app/reaction.js`):** `roundReaction(game)` devuelve quién se queda en pantalla, con qué cara y qué remate suena. Lo usan la escena y los sonidos, para que la cara y el sonido no puedan contar cosas distintas.
 
@@ -131,7 +133,8 @@ src/
 .claude/
   agents/              # game-logic, phaser-scenes, code-reviewer
   skills/              # identidad-visual, codigo-limpio-quispe
-recursos-fv/           # plan y referencias (la subcarpeta ignorar/ no se toca)
+recursos-fv/           # plan, referencias y assets de origen (la subcarpeta ignorar/ no se toca)
+  scripts/             # recortar-personajes.py, recortar-objetos.py, convertir-sonidos.py
 ```
 
 ## Subagentes y skills
@@ -161,13 +164,12 @@ Se juega con un cubilete y dos dados.
 1. La primera ronda la abre un jugador elegido al azar. Quien abre sacude el cubilete (botón Tirar: se mantiene presionado o se toca varias veces y al soltar caen los dados), lo levanta a medias para mirar sus dados en secreto y canta una jugada (puede mentir). Al abrir, la jugada cantada parte de cero: cualquier jugada es válida.
 2. El siguiente jugador en el orden de giro decide:
    - **Cree:** recibe el cubilete, **vuelve a tirar**, mira sus dados en secreto y debe cantar una jugada **estrictamente más alta** que la anterior (puede mentir). Luego lo pasa al siguiente, que vuelve a decidir. (Decidido el 2026-10-21; antes recibía el cubilete a ciegas sin tirar.)
-   - **Desconfía:** se destapa el cubilete y se compara la jugada real (los dados de la última tirada) con la última cantada. Si la real es **igual o mayor**, pierde quien desconfió. Si es menor, pierde quien cantó.
-3. **Cholada** (una equivocación; en pantalla: "¡Cholada!" con un subtítulo según el motivo). Pierde la ronda sin destapar, costando 1, quien:
-   - cree y canta una jugada igual o más baja que la anterior ("Te has quinceao");
+   - **Desconfía:** se destapa el cubilete y se compara la jugada real (los dados de la última tirada) con la última cantada. Si son **exactamente la misma**, pierde quien desconfió. Si no, pierde quien cantó: haber sacado más también es mentir. (Decidido el 2026-10-24; antes se salvaba quien cantaba si sacaba igual o más.)
+3. **Cholada** (una equivocación; en pantalla: "¡Cholada!", con un subtítulo cuando el motivo lo tiene). Pierde la ronda sin destapar, costando 1, quien:
+   - cree y canta una jugada igual o más baja que la anterior (sin subtítulo);
    - cree un Quispe, porque no hay nada más alto que cantar, aunque no fuera cierto ("Nada le gana al Quispe");
-   - con el reloj de presión activo, no decide a tiempo ("Se acabó tu tiempo").
-4. Si alguien canta 65, desconfían y los dados eran 2 y 1, aplica la regla normal: pierde quien desconfió y cuesta 1 (el costo extra va ligado a cantar Quispe).
-5. Quien pierde recibe el castigo del modo y **abre la ronda siguiente**, con la jugada cantada otra vez en cero. Si quedó eliminado, abre el siguiente jugador activo en el orden de giro.
+   - con el reloj de presión activo, no canta o no decide a tiempo ("Se acabó tu tiempo").
+4. Quien pierde recibe el castigo del modo y **abre la ronda siguiente**, con la jugada cantada otra vez en cero. Si quedó eliminado, abre el siguiente jugador activo en el orden de giro.
 
 **Modos:**
 
@@ -179,7 +181,7 @@ Se juega con un cubilete y dos dados.
 
 - Quispe vale más (activa por defecto; antes "vale doble" en el plan): cuando alguien canta Quispe y el siguiente desconfía, si de verdad era Quispe pierde **2** quien desconfió; si era mentira pierde **3** quien cantó. Creer un Quispe sigue costando 1.
 - Destapar en Cholada (desactivada por defecto): en una Cholada se muestran los dados a todos.
-- Reloj de presión (desactivado por defecto): tiempo límite para decidir si se cree o se desconfía (15 segundos por defecto, de 5 a 60). Si se acaba, es Cholada. El plazo empieza cuando el jugador confirma la pantalla de pase.
+- Reloj de presión (desactivado por defecto): tiempo límite para cantar y para decidir si se cree o se desconfía (15 segundos por defecto, de 5 a 60). Si se acaba, es Cholada. El plazo para decidir empieza cuando el jugador confirma la pantalla de pase; el de cantar, cuando los dados ya cayeron. Mientras se sacude el cubilete no corre.
 - Comodín de espía: una vez por partida, cada jugador puede ver uno de los dos dados del cubilete que recibe antes de decidir.
 - Duelo final (opcional, desactivado por defecto): con dos jugadores restantes, la partida pasa a muerte súbita y la siguiente ronda perdida elimina, sin importar letras o vidas restantes.
 - Bots: personalidades que mienten y desconfían con distinto criterio, sumables a cualquier partida.
@@ -220,7 +222,7 @@ Máquina de estados en código puro, probada sin interfaz.
 
 - [x] Lectura y comparación de jugadas (escala completa y Quispe) con tests
 - [x] Estado de partida y ronda; acciones tirar, cantar, creer, desconfiar
-- [x] Resolución al desconfiar (igual o mayor gana quien cantó), Cholada y creer un Quispe
+- [x] Resolución al desconfiar (solo se salva quien cantó exactamente lo que sacó), Cholada y creer un Quispe
 - [x] Castigo al perdedor y nueva ronda abierta por el perdedor con la jugada en cero
 - [x] Modos Clásico QUISPE, Por vidas y Castigo personalizado
 - [x] Eliminación de jugadores, orden de giro y fin de partida
@@ -246,12 +248,14 @@ Pendientes menores detectados:
 Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos); origen y licencias en `recursos-fv/creditos.md`.
 
 - [x] Menú principal con el logo sobre la cantina (celular y PC)
-- [x] Fondo ilustrado de la cantina, mesa redonda, cubilete y dados
+- [x] Fondo ilustrado de la cantina
+- [x] Mesa de paño verde, cubilete con tres poses y dados ilustrados, con respaldo vectorial
 - [x] Personajes: gente cotidiana del Cusco sobre el fondo pintado (estilo A)
 - [x] Mesa en primera persona: solo se ve al jugador en turno, sentado al otro lado; los demás van con su avatar en las tarjetas. Ilustrado a color por defecto, o en silueta con la opción "Personajes en sombra" del panel
 - [x] Avatares reales en las tarjetas de jugador
 - [x] Efectos de sonido (agitar, golpe, destapar, cholada, botón) con botón de silencio
 - [x] Sonidos de cada desenlace: creer, pillar a un mentiroso, perder la ronda, quedar eliminado y ganar la partida
+- [x] Voces y ambiente grabados por Flavio: empezar la partida, destapar, la risa de la Cholada, tres risas al pillar a un mentiroso, el brindis, ganar y quedar eliminado
 - [x] Caras de reacción de los personajes al terminar la ronda (descubierto y descubre)
 - [x] Imágenes en WebP: 2 MB menos de descarga (los PNG quedan en `recursos-fv/graficos/png-originales/`)
 - [ ] Música: la compone Flavio en FL Studio (`musica-cantina.ogg`)

@@ -149,21 +149,23 @@ function doubt(state, action) {
   assertTurn(state, action.playerId);
   const last = getLastCall(state);
   const actual = readDice(state.round.dice);
-  // Si la jugada real es igual o mayor a la cantada, quien cantó tenía razón
-  const callerWasRight = compareCalls(actual, last.value) >= 0;
+  // Solo se salva quien cantó exactamente lo que tenía: haber sacado más también es mentir
+  const callerToldTruth = actual === last.value;
   return endRound(state, {
     type: RESULTS.DOUBT,
-    loserId: callerWasRight ? action.playerId : last.playerId,
+    loserId: callerToldTruth ? action.playerId : last.playerId,
     doubterId: action.playerId,
     callerId: last.playerId,
     call: last.value,
   });
 }
 
-// Reloj de presión: quien no decide a tiempo hace Cholada.
+// Reloj de presión: quien no canta o no decide a tiempo hace Cholada.
 // El reloj lo lleva quien hospeda la partida (UI o servidor), que envía esta acción.
 function timeout(state, action) {
-  assertPhase(state, PHASES.DECIDE);
+  if (state.phase !== PHASES.CALL && state.phase !== PHASES.DECIDE) {
+    throw new GameRuleError('WRONG_PHASE', `El reloj solo corre al cantar o al decidir, y la fase es ${state.phase}`);
+  }
   assertTurn(state, action.playerId);
   if (!state.config.variants.pressureClock.enabled) {
     throw new GameRuleError('VARIANT_DISABLED', 'El reloj de presión no está activo');

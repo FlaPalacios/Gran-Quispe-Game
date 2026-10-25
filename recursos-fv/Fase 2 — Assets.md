@@ -153,14 +153,33 @@ python "recursos-fv/scripts/recortar-personajes.py"
 
 Si se agregan los personajes 5 a 8, cambiar el rango del script y repetir.
 
-## 4. Cubilete y marco (opcionales)
+## 4. Mesa, cubilete y dados
+
+- [x] `mesa.webp`: mesa redonda de paño verde, fondo transparente
+- [x] `cubilete-tapado.webp`, `cubilete-inclinado.webp`, `cubilete-volcado.webp`
+- [x] `dado-1.webp` a `dado-6.webp`
+
+Hechos el 2026-10-24, en `recursos-fv/graficos/fondos y objetos/`. Reemplazan al dibujo por
+código, que queda de respaldo por si falta alguna imagen.
+
+Las tres poses del cubilete van en **una sola hoja**, para que salgan a la misma escala: de
+pie y boca abajo, inclinado con la boca hacia el jugador, y volcado de lado. Los seis dados
+van en **una cuadrícula de 3 x 2** (arriba 1, 2 y 3; abajo 4, 5 y 6), con el valor en la cara
+de arriba. Todo con fondo transparente.
+
+El recorte lo hace `recursos-fv/scripts/recortar-objetos.py`, que además mide dónde cae el
+paño verde dentro de la mesa: de ahí salen las fracciones de `props.js` con las que la escena
+coloca el cubilete y los dados. Si se cambia el dibujo de la mesa, hay que correr el script y
+copiar esos números.
+
+## 5. Marco de retablo (opcional)
 
 Hoy se dibujan en código y ya se ven bien. Si quieres que se parezcan más al logo (cuero con greca), puedes hacerlos:
 
 - [ ] `src/assets/images/shared/cubilete.png` · 320 x 400 px · boca abajo, fondo transparente
 - [ ] `src/assets/images/shared/mesa-marco.png` · 1440 x 1100 px · marco de retablo con el centro transparente
 
-## 5. Sonidos
+## 6. Sonidos
 
 Carpeta `src/assets/audio/`, formato OGG (si solo consigues MP3 o WAV, Claude lo convierte).
 

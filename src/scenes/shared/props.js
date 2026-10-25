@@ -36,12 +36,22 @@ export function coverImage(image, area, { anchorX = 0.5, anchorY = 0.5 } = {}) {
     .setPosition(area.x + area.width * anchorX, area.y + area.height * anchorY);
 }
 
+// Medidas del recorte de los objetos ilustrados; las imprime recursos-fv/scripts/recortar-objetos.py
+// al recortarlos. La mesa guarda su proporción para no deformarse, y el paño sale de dónde
+// cae de verdad el fieltro verde dentro del dibujo.
+const TABLE_RATIO = 1654 / 932;
+const FELT = { x: 0.5067, y: 0.5188, width: 0.7975, height: 0.4957 };
+// El lienzo del cubilete es más ancho y un poco más alto que el cubilete en sí: guarda sitio
+// para las poses inclinadas. Su borde de abajo al centro es el punto donde se apoya en la mesa.
+const CUP_CANVAS = { ratio: 804 / 545, bodyWidth: 381 / 804, bodyHeight: 531 / 545 };
+const DIE_RATIO = 361 / 404;
+
 // Medidas de la mesa redonda apoyada en la parte baja de un área, centrada en ella.
 // Cálculo puro y aparte del dibujo para que la escena coloque personaje, cubilete y dados
 // en proporción a la mesa sin repetir estos números.
 function roundTableGeometry(area) {
-  const width = area.width * 0.9;
-  const height = Math.min(area.height * 0.42, width * 0.46);
+  const height = Math.min(area.height * 0.42, (area.width * 0.9) / TABLE_RATIO);
+  const width = height * TABLE_RATIO;
   const x = area.x + area.width / 2;
   const y = area.y + area.height - height * 0.52;
   return {
@@ -51,7 +61,12 @@ function roundTableGeometry(area) {
     height,
     // Borde lejano del canto: por encima de esta línea asoma quien está sentado detrás
     top: y - height / 2,
-    felt: { x, y, width: width * 0.84, height: height * 0.72 },
+    felt: {
+      x: x + (FELT.x - 0.5) * width,
+      y: y + (FELT.y - 0.5) * height,
+      width: width * FELT.width,
+      height: height * FELT.height,
+    },
   };
 }
 
@@ -62,52 +77,69 @@ export function tableProps(area) {
   const table = roundTableGeometry(area);
   const { felt } = table;
 
-  // Tapado al centro del paño; destapado se corre a un lado, siempre sobre el paño
+  // Tapado al centro del paño; volcado se corre a un lado, siempre sobre el paño
   const rest = { x: felt.x, y: felt.y + felt.height * 0.14 };
-  const aside = { x: felt.x + felt.width * 0.27, y: felt.y + felt.height * 0.05 };
+  // Volcado ocupa mucho más ancho que de pie: va bien a la derecha para no tapar los dados
+  const aside = { x: felt.x + felt.width * 0.3, y: felt.y + felt.height * 0.06 };
 
   // El último tope del alto es el canto lejano de la mesa: así el cubilete no asoma por
   // detrás ni se le cruza por delante a quien está sentado al otro lado
-  const height = Math.min(felt.height * 0.95, felt.width * 0.26, (rest.y - table.top) * 0.95);
-  const width = height * 0.85;
+  const body = Math.min(felt.height * 0.95, felt.width * 0.26, (rest.y - table.top) * 0.95);
+  const height = body / CUP_CANVAS.bodyHeight;
+  const width = height * CUP_CANVAS.ratio;
 
-  // Destapado a medias para mirar los dados sin que los demás los vean: el cubilete gira
-  // sobre la esquina izquierda de su base y se levanta por la derecha (como en la vida real)
-  const tilt = (PEEK_ANGLE * Math.PI) / 180;
-  const half = width / 2;
-  const peek = { x: rest.x - half + half * Math.cos(tilt), y: rest.y + half * Math.sin(tilt), angle: PEEK_ANGLE };
-  const diceSize = height * 0.42;
-  const peekSize = height * 0.32;
+  // Grandes a propósito: en celular, con dados chicos no se leen los puntos. El paño es
+  // bastante achatado, así que el tope de cuánto pueden crecer es el alto, no el ancho.
+  const diceSize = body * 0.68;
+  const peekSize = body * 0.42;
 
   return {
     ...table,
-    cup: { width, height, rest, aside, peek },
+    cup: {
+      // Lienzo de la imagen, con el origen abajo al centro (donde se apoya)
+      width,
+      height,
+      // El cubilete en sí, para el respaldo vectorial y para medir que quepa en el paño
+      body: { width: width * CUP_CANVAS.bodyWidth, height: body },
+      rest,
+      aside,
+    },
     // Los dados caen al lado opuesto, donde el cubilete ya no los tapa
-    dice: { size: diceSize, gap: diceSize * 0.75, x: felt.x - felt.width * 0.16, y: felt.y + felt.height * 0.18 },
+    dice: diceSpot(diceSize, felt.x - felt.width * 0.12, felt.y + felt.height * 0.08),
     // Al destapar a medias se asoman por la abertura, delante del cubilete
-    peekDice: { size: peekSize, gap: peekSize * 0.6, x: rest.x + width * 0.14, y: rest.y - peekSize * 0.4 },
+    peekDice: diceSpot(peekSize, rest.x + width * 0.06, rest.y - body * 0.22),
   };
 }
 
-// Grados que se inclina el cubilete al mirar los dados
-const PEEK_ANGLE = -26;
+// Dónde y de qué tamaño va cada dado. El dibujo es más alto que ancho, así que el alto sale
+// de la proporción del recorte y no del ancho.
+function diceSpot(size, x, y) {
+  // Quedan juntos, casi tocándose: así caben grandes sin salirse del paño
+  return { size, height: size / DIE_RATIO, gap: size * 0.58, x, y };
+}
 
-// Mesa redonda de madera con paño azul, apoyada en la parte baja del área de juego.
+
+// Sombra en el piso bajo la mesa: es lo que impide que parezca flotar sobre el fondo.
+// La usan tanto la mesa ilustrada como la vectorial, para que no queden dos sombras distintas.
+export function drawTableShadow(g, table) {
+  drawSoftShadow(g, table.x, table.y + table.height * 0.3, table.width * 0.95, table.height * 0.55);
+}
+
+// Mesa redonda de madera con paño verde, apoyada en la parte baja del área de juego.
 // Se usa cuando hay fondo ilustrado: el escenario ya pone el ambiente y la mesa solo necesita ser mesa.
 // Devuelve las medidas de tableProps: el paño, el canto lejano y dónde van cubilete y dados.
 export function drawRoundTable(g, area) {
   const table = tableProps(area);
   const { x: cx, y: cy, width, height, felt } = table;
 
-  // Sombra en el piso, corrida hacia abajo: es lo que impide que la mesa parezca flotar
-  drawSoftShadow(g, cx, cy + height * 0.3, width * 0.95, height * 0.55);
+  drawTableShadow(g, table);
 
   // Canto de madera
   g.fillStyle(COLORS.madera).fillEllipse(cx, cy, width, height);
   g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(cx, cy, width, height);
 
-  // Paño
-  g.fillStyle(COLORS.retabloAzul).fillEllipse(felt.x, felt.y, felt.width, felt.height);
+  // Paño, del mismo verde que el de la mesa ilustrada
+  g.fillStyle(COLORS.pano).fillEllipse(felt.x, felt.y, felt.width, felt.height);
   g.lineStyle(OUTLINE_WIDTH, COLORS.borde).strokeEllipse(felt.x, felt.y, felt.width, felt.height);
 
   // Hilo dorado del borde del paño; crece con la mesa para no desaparecer en pantallas grandes

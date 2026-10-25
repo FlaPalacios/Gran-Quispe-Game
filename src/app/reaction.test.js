@@ -39,7 +39,8 @@ describe('roundReaction', () => {
   });
 
   it('si quien desconfió se equivocó, se queda quien cantó, riéndose', () => {
-    const called = act(roll(newGame(), 'ana', [6, 5]), 'CALL', 'ana', 42);
+    // Cantó justo lo que tenía, así que quien desconfió se equivocó
+    const called = act(roll(newGame(), 'ana', [6, 5]), 'CALL', 'ana', 65);
     expect(roundReaction(act(called, 'DOUBT', 'beto'))).toEqual({
       playerId: 'ana',
       pose: 'gloating',

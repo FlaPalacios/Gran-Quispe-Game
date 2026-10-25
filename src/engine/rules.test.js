@@ -171,18 +171,19 @@ describe('flujo de una ronda', () => {
 });
 
 describe('desconfiar', () => {
-  it('si la jugada real es mayor, pierde quien desconfió', () => {
-    let s = act(rollAs(newGame(), 'ana', [5, 5]), 'CALL', 'ana', 42);
+  it('si la jugada real es la cantada, pierde quien desconfió', () => {
+    let s = act(rollAs(newGame(), 'ana', [2, 4]), 'CALL', 'ana', 42);
     s = act(s, 'DOUBT', 'beto');
     expect(s.phase).toBe(PHASES.ROUND_OVER);
-    expect(s.round.result).toMatchObject({ type: RESULTS.DOUBT, loserId: 'beto', actual: 150, dice: [5, 5] });
+    expect(s.round.result).toMatchObject({ type: RESULTS.DOUBT, loserId: 'beto', actual: 42, dice: [2, 4] });
     expect(s.players.find((p) => p.id === 'beto').letters).toBe(1);
   });
 
-  it('si la jugada real es igual, gana quien cantó', () => {
-    let s = act(rollAs(newGame(), 'ana', [2, 4]), 'CALL', 'ana', 42);
+  it('si la jugada real es mayor, también mintió: pierde quien cantó', () => {
+    let s = act(rollAs(newGame(), 'ana', [6, 5]), 'CALL', 'ana', 32);
     s = act(s, 'DOUBT', 'beto');
-    expect(s.round.result.loserId).toBe('beto');
+    expect(s.round.result).toMatchObject({ loserId: 'ana', call: 32, actual: 65 });
+    expect(s.players.find((p) => p.id === 'ana').letters).toBe(1);
   });
 
   it('si la jugada real es menor, pierde quien cantó', () => {
@@ -190,6 +191,18 @@ describe('desconfiar', () => {
     s = act(s, 'DOUBT', 'beto');
     expect(s.round.result.loserId).toBe('ana');
     expect(s.players.find((p) => p.id === 'ana').letters).toBe(1);
+  });
+
+  it('cantar un par y sacar otro más alto sigue siendo mentira', () => {
+    let s = act(rollAs(newGame(), 'ana', [2, 2]), 'CALL', 'ana', 110);
+    s = act(s, 'DOUBT', 'beto');
+    expect(s.round.result).toMatchObject({ loserId: 'ana', call: 110, actual: 120 });
+  });
+
+  it('cantar 65 y sacar Quispe también pierde quien cantó', () => {
+    let s = act(rollAs(newGame(), 'ana', [2, 1]), 'CALL', 'ana', 65);
+    s = act(s, 'DOUBT', 'beto');
+    expect(s.round.result).toMatchObject({ loserId: 'ana', call: 65, actual: QUISPE, cost: 1 });
   });
 
   it('desconfiar de un Quispe cierto: pierde quien desconfió', () => {
@@ -206,9 +219,10 @@ describe('desconfiar', () => {
 
   it('se compara contra el último que cantó, no contra quien abrió', () => {
     let s = act(rollAs(newGame(), 'ana', [5, 4]), 'CALL', 'ana', 42);
-    s = act(believeAndRoll(s, 'beto', [5, 4]), 'CALL', 'beto', 110);
+    s = act(believeAndRoll(s, 'beto', [5, 4]), 'CALL', 'beto', 54);
     s = act(s, 'DOUBT', 'cata');
-    expect(s.round.result).toMatchObject({ loserId: 'beto', callerId: 'beto', doubterId: 'cata', actual: 54 });
+    // Beto cantó lo que tenía, así que pierde quien desconfió
+    expect(s.round.result).toMatchObject({ loserId: 'cata', callerId: 'beto', doubterId: 'cata', actual: 54 });
   });
 
   it('al desconfiar se destapan los dados de la última tirada, no los de quien abrió', () => {
@@ -263,7 +277,7 @@ describe('siguiente ronda', () => {
   it('si el perdedor quedó eliminado, abre el siguiente activo', () => {
     let s = newGame();
     s = { ...s, players: s.players.map((p) => (p.id === 'beto' ? { ...p, letters: 5 } : p)) };
-    s = act(rollAs(s, 'ana', [6, 6]), 'CALL', 'ana', 42);
+    s = act(rollAs(s, 'ana', [6, 6]), 'CALL', 'ana', 160);
     s = act(s, 'DOUBT', 'beto');
     expect(s.players.find((p) => p.id === 'beto').eliminated).toBe(true);
     s = act(s, 'NEXT_ROUND');
@@ -278,7 +292,7 @@ describe('siguiente ronda', () => {
   it('si el perdedor eliminado es el último de la lista, abre el primero', () => {
     let s = newGame({ opener: 1 });
     s = { ...s, players: s.players.map((p) => (p.id === 'cata' ? { ...p, letters: 5 } : p)) };
-    s = act(rollAs(s, 'beto', [6, 6]), 'CALL', 'beto', 42);
+    s = act(rollAs(s, 'beto', [6, 6]), 'CALL', 'beto', 160);
     s = act(act(s, 'DOUBT', 'cata'), 'NEXT_ROUND');
     expect(s.currentPlayerId).toBe('ana');
   });
@@ -385,7 +399,8 @@ describe('variantes', () => {
   it('Quispe vale más: no aplica si no se cantó Quispe, aunque los dados lo sean', () => {
     let s = act(rollAs(newGame(), 'ana', [2, 1]), 'CALL', 'ana', 65);
     s = act(s, 'DOUBT', 'beto');
-    expect(s.round.result).toMatchObject({ loserId: 'beto', cost: 1 });
+    // Cantó 65 con un Quispe en la mano: mintió, y cuesta lo de siempre
+    expect(s.round.result).toMatchObject({ loserId: 'ana', cost: 1 });
   });
 
   it('Quispe vale más desactivada: todo cuesta 1', () => {
@@ -414,12 +429,30 @@ describe('variantes', () => {
     expect(s.round.result).toMatchObject({ type: RESULTS.CHOLADA, reason: CHOLADA_REASONS.TIMEOUT, loserId: 'beto' });
   });
 
-  it('Reloj de presión: TIMEOUT fuera de la fase de decidir o del turno se rechaza', () => {
+  it('Reloj de presión: también corre al cantar', () => {
+    const variants = { pressureClock: { enabled: true } };
+    const s = act(rollAs(newGame({ variants }), 'ana', [4, 2]), 'TIMEOUT', 'ana');
+    expect(s.round.result).toMatchObject({
+      type: RESULTS.CHOLADA,
+      reason: CHOLADA_REASONS.TIMEOUT,
+      loserId: 'ana',
+      cost: 1,
+      revealed: false,
+      dice: null,
+    });
+    expect(s.round.calls).toHaveLength(0);
+  });
+
+  it('Reloj de presión: TIMEOUT fuera de cantar o decidir, o fuera del turno, se rechaza', () => {
     const variants = { pressureClock: { enabled: true } };
     const decide = act(rollAs(newGame({ variants }), 'ana', [4, 2]), 'CALL', 'ana', 42);
     expect(() => act(decide, 'TIMEOUT', 'cata')).toThrow(expect.objectContaining({ code: 'NOT_YOUR_TURN' }));
+    // Mientras se sacude el cubilete no corre el reloj
     const believed = act(decide, 'BELIEVE', 'beto');
     expect(() => act(believed, 'TIMEOUT', 'beto')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
+    expect(() => act(act(decide, 'DOUBT', 'beto'), 'TIMEOUT', 'beto')).toThrow(
+      expect.objectContaining({ code: 'WRONG_PHASE' }),
+    );
   });
 
   it('Reloj de presión desactivado: TIMEOUT se rechaza', () => {

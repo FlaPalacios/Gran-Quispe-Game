@@ -7,10 +7,21 @@ const backgrounds = import.meta.glob('../../assets/images/*/*-fondo.{webp,png,jp
   query: '?url',
   import: 'default',
 });
+const objects = import.meta.glob('../../assets/images/shared/*.{webp,png}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
 
 export const KEYS = Object.freeze({
   cantinaBackground: 'cantina-fondo',
+  table: 'mesa',
+  // Las tres poses del cubilete, recortadas a la misma escala y sobre su punto de apoyo
+  cupPoses: Object.freeze({ closed: 'cubilete-tapado', peek: 'cubilete-inclinado', open: 'cubilete-volcado' }),
 });
+
+export const DIE_VALUES = Object.freeze([1, 2, 3, 4, 5, 6]);
+export const dieKey = (value) => `dado-${value}`;
 
 // Pone en la cola del cargador los retratos pedidos y devuelve cuántos quedaron en ella.
 // Si falta un archivo simplemente no se carga: la escena cae en la pose neutral, y si tampoco
@@ -33,6 +44,12 @@ function queuePortraits(scene, characters, poses, asked) {
 export function preloadCantina(scene) {
   const background = backgrounds['../../assets/images/cantina/cantina-fondo.webp'];
   if (background) scene.load.image(KEYS.cantinaBackground, background);
+
+  // Mesa, cubilete y dados. Lo que falte lo dibuja la escena en vectorial.
+  for (const name of [KEYS.table, ...Object.values(KEYS.cupPoses), ...DIE_VALUES.map(dieKey)]) {
+    const url = objects[`../../assets/images/shared/${name}.webp`];
+    if (url) scene.load.image(name, url);
+  }
 
   const everyone = Array.from({ length: CHARACTER_COUNT }, (_, i) => i);
   queuePortraits(scene, everyone, ['neutral'], null);

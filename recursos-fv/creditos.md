@@ -10,7 +10,11 @@
 | `images/cantina/cantina-personaje-1..4-descubierto.webp` | Hoja de caras de vergüenza (`recursos-fv/graficos/personajes/Cuatro retratos cómicos de vergüenza.png`), recortada y alineada con la neutral | Propio |
 | `images/cantina/cantina-personaje-1..4-descubre.webp` | Hoja de caras triunfales (`recursos-fv/graficos/personajes/Personajes_Cuando lo pillan mintiendo.png`), recortada y alineada con la neutral | Propio |
 
-Los PNG originales de los personajes y avatares están en `recursos-fv/graficos/png-originales/`. En `src/assets/` se usan en WebP: pesan 307 KB en vez de 2 MB, sin diferencia visible.
+| `images/shared/mesa.webp` | Generada con ChatGPT por Flavio (`recursos-fv/graficos/fondos y objetos/Mesa de póker rústica de fieltro verde.png`), recortada | Propio |
+| `images/shared/cubilete-tapado/-inclinado/-volcado.webp` | Hoja de tres poses (`Tres vasos de cuero ilustrados.png`), recortadas a la misma escala y sobre su punto de apoyo | Propio |
+| `images/shared/dado-1..6.webp` | Cuadrícula de seis caras (`Colección de dados ilustrados 3D.png`), recortadas al mismo tamaño | Propio |
+
+Los PNG originales de los personajes, avatares y objetos están en `recursos-fv/graficos/png-originales/`. En `src/assets/` se usan en WebP: pesan 307 KB en vez de 2 MB, sin diferencia visible.
 
 ## Sonidos
 
@@ -24,13 +28,22 @@ Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 | `sfx-cholada` | Sintetizado por Claude (trombón triste de 4 notas) | Propio |
 | `sfx-boton` | Kenney, "Impact Sounds": `impactWood_light_001` | CC0 |
 | `sfx-creo` | BigSoundBank 1323 (choque de vasos) | CC0 |
-| `sfx-descubierto` | Kenney, "Music Jingles": `HIT09` | CC0 |
 | `sfx-pierde-ronda` | Kenney, "Music Jingles": `PIZZI01` | CC0 |
-| `sfx-eliminado` | Kenney, "Music Jingles": `SAX07` | CC0 |
-| `sfx-gana-partida` | Kenney, "Music Jingles": `SAX02` | CC0 |
+| `sfx-empezar` | Grabado por Flavio: "sonido cerveza empezar juego" | Propio |
+| `sfx-destapar` | Grabado por Flavio: "Sonido revelar dadoss" | Propio |
+| `sfx-cholada` | Grabado por Flavio: "Risa Cholada" | Propio |
+| `sfx-risa-hombre`, `sfx-risa-hombre-2`, `sfx-risa-abuela` | Grabadas por Flavio: las tres risas de "Descubierto" | Propio |
+| `sfx-cerveza-ganar` | Grabado por Flavio: "Sonido Cerveza ganar" | Propio |
+| `sfx-gana-partida` | Grabado por Flavio: "Sonido de Ganar" | Propio |
+| `sfx-eliminado` | Grabado por Flavio: "Sonido de Perder" | Propio |
 
 Kenney (www.kenney.nl) no exige crédito, pero lo agradece: se puede nombrar en la pantalla de créditos.
 
-Los cinco últimos conservan su OGG original (no se recodifica para no perder calidad) y su MP3 se sacó de ahí con PyAV; el volumen de cada uno se empareja en el mapa `VOLUME` de `src/app/audio.js`, no en el archivo.
+Los de Kenney y BigSoundBank conservan su OGG original (no se recodifica para no perder
+calidad) y su MP3 se sacó de ahí. Los de Flavio salen de `recursos-fv/Sonidos Fla MP3/` con
+`recursos-fv/scripts/convertir-sonidos.py`, que los normaliza y genera el OGG (Opus) y el MP3.
+Cuál suena más fuerte que cuál se ajusta en la tabla `SFX` de `src/app/audio.js`, no en el archivo.
 
-Las alternativas para cambiar alguno están en `recursos-fv/sonidos-alternativos/` y `recursos-fv/sonidos-candidatos/` (mismas fuentes y licencia).
+Los que fueron reemplazados quedan en `recursos-fv/sonidos-alternativos/` (destapar, cholada,
+descubierto, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
+llegaron a entrar, en `recursos-fv/sonidos-candidatos/`.

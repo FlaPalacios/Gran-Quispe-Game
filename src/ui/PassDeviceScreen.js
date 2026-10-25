@@ -10,6 +10,6 @@ export function PassDeviceScreen({ name, onReady }) {
     h('p', { class: 'pass__title' }, t('pass.title')),
     h('p', { class: 'pass__name', id: 'pass-name' }, name),
     h('p', { class: 'pass__hint' }, t('pass.hint')),
-    h('button', { class: 'btn btn--primary btn--big', onClick: onReady, 'data-autofocus': true }, t('pass.ready', { name })),
+    h('button', { class: 'btn btn--primary btn--big', onClick: onReady, 'data-autofocus': true }, t('pass.ready')),
   );
 }

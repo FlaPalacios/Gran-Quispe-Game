@@ -9,7 +9,7 @@ La referencia visual es el wireframe hecho en Claude Design: `recursos-fv/refere
 
 ## Lo que se toma del wireframe
 
-- Mesa de paño azul colonial, cubilete de madera con franjas roja y dorada, dados blancos.
+- Cubilete de cuero con greca andina, dados de hueso con el as en rojo.
 - Tarjetas y paneles color crema con contorno negro grueso y sombra sólida desplazada hacia abajo (sin desenfoque).
 - Botón principal rojo quemado, botón secundario azul colonial, texto crema.
 - Tarjetas de jugador con avatar redondo y las 6 letras QUISPE en casillas: perdidas en rojo quemado, pendientes en gris oscuro.
@@ -17,7 +17,7 @@ La referencia visual es el wireframe hecho en Claude Design: `recursos-fv/refere
 ## Lo que cambió al llegar el arte definitivo (2026-10-21)
 
 - **El fondo de rayos de sol ya no se usa.** Cada escenario tiene su fondo ilustrado; el de rayos (`drawSunburst`) queda solo como respaldo si la imagen no carga.
-- **La mesa ya no lleva marco de retablo.** El fondo ya pone el ambiente, así que la mesa es una elipse de madera con paño azul en la parte baja (`drawRoundTable`). El marco antiguo (`drawTable`) sigue disponible por si un escenario lo necesita.
+- **La mesa ya no lleva marco de retablo.** El fondo ya pone el ambiente, así que la mesa va sola en la parte baja. El marco antiguo (`drawTable`) sigue disponible por si un escenario lo necesita.
 - **El menú ya no dibuja el título con tipografía**, sino el logo: `src/assets/images/shared/logo.webp`.
 - El escenario se oscurece con una capa de `--color-fondo`: al 72 % en el menú (para que resalte el logo) y al 35 % en la mesa (para que se lea el HUD).
 
@@ -29,11 +29,13 @@ La escena dibuja **dentro del rectángulo de su zona**, no contra la ventana: el
 
 ## Composición de la mesa
 
-De atrás hacia adelante: fondo desenfocado de los costados → fondo del escenario → capa de oscurecido → personaje del jugador en turno → mesa → dados → cubilete.
+De atrás hacia adelante: fondo desenfocado de los costados → fondo del escenario → capa de oscurecido → sombra → personaje del jugador en turno → mesa → cubilete → dados.
+
+Los dados van **delante** del cubilete: al levantarlo a medias para mirar, asoman por su abertura.
 
 - La mesa se apoya en la parte de abajo de la zona de la escena, centrada, y su tamaño sale del ancho y alto de esa zona.
 - El personaje se ve de la cintura para arriba, centrado detrás de la mesa, que le tapa la cintura. Su cabeza nunca sube por encima de `scene.contentTop`, así que no invade las tarjetas ni la barra. Al terminar la ronda se queda quien perdió, y al terminar la partida quien ganó. Si no queda alto suficiente (pantalla baja con 8 jugadores), se oculta en vez de salir aplastado.
-- Al destapar, el cubilete **no se levanta en alto**: se corre a un costado de la mesa y se inclina. Así no invade el resto de la escena.
+- Al destapar, el cubilete **no se levanta en alto**: se corre a un costado de la mesa y se vuelca. Así no invade el resto de la escena.
 - La mesa y el personaje llevan **sombra difusa** a sus pies (`drawSoftShadow`). Sin ella parecen flotar sobre el fondo, que es lo primero que delata que son dos piezas distintas.
 
 ## Responsivo
@@ -88,24 +90,29 @@ Decidido el 2026-10-21 (opción A): **fondo pintado y personajes planos encima**
 - Personajes: gente cotidiana del Cusco con personalidad (el chibolo hincha del Cienciano, la abuela con lentes, el oficinista, el chofer de bus), **solo en el escenario de cantina**. Prompt en `recursos-fv/Fase 2 — Assets.md`.
 - Bar universitario y paisaje andino: solo ambientación, sin personajes.
 
-## Tamaños de sprite (propuesta inicial)
+## Tamaños de sprite
 
-Los assets se exportan al doble de su tamaño en pantalla para verse nítidos en celulares de alta densidad.
+Los assets se exportan al doble de su tamaño en pantalla para verse nítidos en celulares de
+alta densidad. Los que ya existen llevan su medida real; los que faltan, la propuesta.
 
 | Asset | Tamaño del archivo |
 | --- | --- |
 | Fondo de escenario | 2560 x 2560 px (cuadrado, sirve para vertical y horizontal) |
 | Logo | 1100 x 733 px, con transparencia |
-| Mesa | 1440 x 1100 px |
-| Cubilete | 320 x 400 px |
-| Cara de dado | 160 x 160 px |
+| Mesa | 1654 x 932 px, recortada al borde de la madera |
+| Cubilete (tres poses) | 804 x 545 px cada una, mismo lienzo y mismo punto de apoyo |
+| Cara de dado | 361 x 404 px (es más alto que ancho: el dado va en perspectiva) |
 | Personaje de cantina | 512 x 768 px |
 | Avatar de jugador | 192 x 192 px |
-| Icono de UI | 96 x 96 px |
+| Icono de UI | 96 x 96 px (propuesta) |
+
+Las medidas de la mesa, el cubilete y los dados no son decorativas: `src/scenes/shared/props.js`
+las usa para colocar todo sobre el paño. Si se reexporta alguna, hay que correr
+`recursos-fv/scripts/recortar-objetos.py` y copiar los números que imprime.
 
 ## Convención de nombres en `src/assets/`
 
-- Todo en minúsculas, kebab-case, sin tildes ni ñ: `cantina-fondo.png`, `dado-cara-6.png`.
+- Todo en minúsculas, kebab-case, sin tildes ni ñ: `cantina-fondo.png`, `dado-6.png`.
 - Imágenes por escenario en `src/assets/images/<escenario>/` con prefijo del escenario: `cantina-`, `bar-`, `andino-`.
 - Lo común a los tres escenarios (dados, cubilete, iconos) en `src/assets/images/shared/`.
 - Audio en `src/assets/audio/` con prefijo de tipo: `sfx-agitar-cubilete.ogg`, `musica-cantina.ogg`.

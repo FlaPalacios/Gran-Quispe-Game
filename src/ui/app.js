@@ -61,6 +61,7 @@ export function mountApp(root, store) {
     const hud = GameHud({
       snapshot,
       store,
+      callSheetOpen,
       onExit: () => go('menu', () => store.leave()),
       onOpenCalls: () => {
         callSheetOpen = true;
@@ -78,6 +79,8 @@ export function mountApp(root, store) {
     return [
       hud,
       CallSheet({
+        snapshot,
+        store,
         onPick: (value) => store.dispatch({ type: 'CALL', playerId: game.currentPlayerId, value }),
         onCancel: () => {
           callSheetOpen = false;

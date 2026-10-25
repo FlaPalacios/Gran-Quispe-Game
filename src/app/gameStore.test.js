@@ -92,6 +92,18 @@ describe('gameStore', () => {
     expect(store.get().turnStartedAt).toBeNull();
   });
 
+  it('el plazo para cantar empieza cuando caen los dados, no al recibir el celular', () => {
+    let clock = 1000;
+    const store = createGameStore({ rng: sequence(0, 0.5, 0.2), save: vi.fn(), clear: vi.fn(), now: () => clock });
+    store.start(SETUP);
+    store.confirmViewer('ana');
+    expect(store.get().turnStartedAt).toBe(1000);
+    // Lo que tarde en sacudir el cubilete no le come tiempo para cantar
+    clock = 9000;
+    store.dispatch({ type: 'ROLL', playerId: 'ana' });
+    expect(store.get().turnStartedAt).toBe(9000);
+  });
+
   it('no pide pase al terminar la ronda y borra el guardado al terminar la partida', () => {
     const { store, clear } = newStore(0.5, 0.2);
     store.start({ ...SETUP, config: { mode: 'lives', lives: 1 } });

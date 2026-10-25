@@ -1,10 +1,11 @@
 // HUD de la partida (HTML sobre el canvas): panel de turno, tarjetas de jugadores y acciones.
 // Solo lee el estado y envía acciones al store; las reglas las decide el motor.
 import { avatarFor } from '../app/characters.js';
+import { viewerCanSeeDice } from '../app/gameStore.js';
 import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
-import { PHASES, RESULTS, canSeeDice, getLastCall } from '../engine/rules.js';
-import { t } from '../i18n/index.js';
+import { PHASES, RESULTS, getLastCall } from '../engine/rules.js';
+import { hasText, t } from '../i18n/index.js';
 import { RollButton } from './RollButton.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
@@ -20,7 +21,9 @@ export function stopClock() {
   clockInterval = null;
 }
 
-export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
+// callSheetOpen: con la hoja abierta el reloj se dibuja dentro de ella, que la tapa.
+// Solo puede haber uno a la vez, porque el intervalo es único.
+export function GameHud({ snapshot, store, callSheetOpen, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
   // Tres zonas independientes: cada una se coloca con las medidas de src/app/stage.js
@@ -46,14 +49,14 @@ export function GameHud({ snapshot, store, onExit, onOpenCalls, onPlayAgain, onM
     h(
       'section',
       { class: 'zona hud__play' },
-      turnCard(snapshot, current, store),
+      turnCard(snapshot, current, store, !callSheetOpen),
       actions(game, current, { store, onOpenCalls, onPlayAgain, onMenu }),
     ),
   );
 }
 
-function turnCard(snapshot, current, store) {
-  const { game, viewerId } = snapshot;
+function turnCard(snapshot, current, store, withClock) {
+  const { game } = snapshot;
   const last = getLastCall(game);
   switch (game.phase) {
     case PHASES.ROLL:
@@ -66,7 +69,8 @@ function turnCard(snapshot, current, store) {
         t('game.call.title'),
         last ? t('game.call.raiseHint', { call: formatCall(last.value) }) : t('game.call.openHint'),
         // Los dados solo están dibujados en el canvas: se repiten en texto para lectores de pantalla
-        canSeeDice(game, viewerId) && h('span', { class: 'sr-only' }, diceText(game.round.dice)),
+        viewerCanSeeDice(snapshot) && h('span', { class: 'sr-only' }, diceText(game.round.dice)),
+        withClock && pressureClock(snapshot, store),
       );
     case PHASES.DECIDE:
       return h(
@@ -80,7 +84,7 @@ function turnCard(snapshot, current, store) {
           ' ',
           h('span', { class: 'call-chip' }, formatCall(last.value)),
         ),
-        pressureClock(snapshot, store),
+        withClock && pressureClock(snapshot, store),
       );
     case PHASES.ROUND_OVER:
     case PHASES.GAME_OVER:
@@ -114,7 +118,7 @@ function resultCard(game) {
     'div',
     { class: `turn-card result${isCholada ? ' result--cholada' : ''}`, role: 'status' },
     h('h2', { class: 'result__title' }, t(isCholada ? 'result.cholada.title' : 'result.doubt.title')),
-    isCholada && h('p', { class: 'result__subtitle' }, t(`result.cholada.${result.reason}`)),
+    isCholada && hasText(`result.cholada.${result.reason}`) && h('p', { class: 'result__subtitle' }, t(`result.cholada.${result.reason}`)),
     lines.map((line) => h('p', { class: 'turn-card__text' }, line)),
     result.penaltyText && h('p', { class: 'result__penalty' }, t('result.penalty', { text: result.penaltyText })),
     game.phase === PHASES.GAME_OVER && h('p', { class: 'result__winner' }, t('gameover.title', { name: playerName(game, game.winnerId) })),
@@ -187,9 +191,12 @@ function playerCard(game, player, index) {
   );
 }
 
+// Reloj de presión: corre al cantar y al decidir, que son las dos fases en las que el motor
+// acepta TIMEOUT. Se dibuja en un solo sitio a la vez (el panel de turno o la hoja).
 function pressureClock({ game, turnStartedAt }, store) {
   const { pressureClock: variant } = game.config.variants;
   if (!variant.enabled || turnStartedAt == null) return null;
+  if (game.phase !== PHASES.CALL && game.phase !== PHASES.DECIDE) return null;
 
   const total = variant.seconds * 1000;
   const deadline = turnStartedAt + total;
@@ -203,20 +210,20 @@ function pressureClock({ game, turnStartedAt }, store) {
   };
   tick();
   stopClock();
-  const playerId = game.currentPlayerId;
+  const { currentPlayerId: playerId, phase } = game;
   clockInterval = setInterval(() => {
     if (tick() > 0) return;
     stopClock();
-    // Solo si sigue siendo la misma decisión (el motor también lo valida)
+    // Solo si sigue siendo el mismo momento (el motor también lo valida)
     const { game: now } = store.get();
-    if (now?.phase === PHASES.DECIDE && now.currentPlayerId === playerId) store.dispatch({ type: 'TIMEOUT', playerId });
+    if (now?.phase === phase && now.currentPlayerId === playerId) store.dispatch({ type: 'TIMEOUT', playerId });
   }, 200);
   return h('div', { class: 'timer', role: 'timer' }, h('span', { class: 'timer__track' }, bar), label);
 }
 
 // Hoja inferior para elegir la jugada. Se ofrecen todas, incluso las más bajas:
 // cantar igual o menos que la anterior es una Cholada y forma parte del juego.
-export function CallSheet({ onPick, onCancel }) {
+export function CallSheet({ snapshot, store, onPick, onCancel }) {
   const numbers = CALL_SCALE.filter((v) => v !== QUISPE);
   const option = (value, extra = '') =>
     h('button', { class: `btn btn--light call-option${extra}`, onClick: () => onPick(value) }, formatCall(value));
@@ -231,6 +238,8 @@ export function CallSheet({ onPick, onCancel }) {
       'div',
       { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'sheet-title' },
       h('h2', { class: 'sheet__title', id: 'sheet-title', tabindex: '-1', 'data-autofocus': true }, t('game.pickCall')),
+      // La hoja tapa el panel de turno: el reloj se sigue viendo aquí
+      pressureClock(snapshot, store),
       h('div', { class: 'call-grid' }, numbers.map((v) => option(v)), option(QUISPE, ' call-option--quispe')),
       h('button', { class: 'btn btn--light', onClick: onCancel }, t('game.cancel')),
     ),

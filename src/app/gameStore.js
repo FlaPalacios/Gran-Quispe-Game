@@ -15,6 +15,7 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
 
   const snapshot = () => ({ game, viewerId, turnStartedAt });
   const notify = () => listeners.forEach((fn) => fn(snapshot()));
+  const signal = (name) => signalListeners.forEach((fn) => fn(name));
   const persist = () => (game.phase === PHASES.GAME_OVER ? clear() : save(game));
 
   return {
@@ -31,6 +32,7 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
       turnStartedAt = null;
       persist();
       notify();
+      signal('gameStart');
     },
 
     resume(savedGame) {
@@ -41,12 +43,15 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
     },
 
     dispatch(action) {
-      const previousPlayerId = game.currentPlayerId;
+      const before = game;
       game = applyAction(game, action, { rng });
-      // Cambió el jugador en turno: hay que volver a pasar el celular
-      if (game.currentPlayerId !== previousPlayerId) {
+      if (game.currentPlayerId !== before.currentPlayerId) {
+        // Cambió el jugador en turno: hay que volver a pasar el celular
         viewerId = null;
         turnStartedAt = null;
+      } else if (game.phase === PHASES.CALL && before.phase !== PHASES.CALL) {
+        // El plazo para cantar empieza cuando los dados ya cayeron
+        turnStartedAt = now();
       }
       persist();
       notify();
@@ -59,11 +64,10 @@ export function createGameStore({ rng = Math.random, save = saveGame, clear = cl
       notify();
     },
 
-    // Señales de la interfaz que no cambian el estado ni se guardan (por ejemplo, 'cupShake':
-    // sacudir el cubilete antes de tirar). Las escuchan la escena y los sonidos.
-    signal(name) {
-      signalListeners.forEach((fn) => fn(name));
-    },
+    // Avisos puntuales que no son estado y no se guardan: 'cupShake' (cada sacudida del
+    // cubilete, antes de tirar) y 'gameStart' (empezó una partida nueva). Los escuchan la
+    // escena y los sonidos, que necesitan el momento exacto y no les basta con el estado.
+    signal,
 
     onSignal(fn) {
       signalListeners.add(fn);

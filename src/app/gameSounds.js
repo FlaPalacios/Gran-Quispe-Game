@@ -15,6 +15,10 @@ export function connectGameSounds(store) {
   let pendingSting = null;
 
   const unsubscribeSignals = store.onSignal((name) => {
+    if (name === 'gameStart') {
+      playSfx('start');
+      return;
+    }
     if (name !== 'cupShake' || Date.now() - lastShakeAt < SHAKE_SOUND_EVERY_MS) return;
     lastShakeAt = Date.now();
     playSfx('shake');
@@ -40,10 +44,14 @@ export function connectGameSounds(store) {
     }
 
     if (game.phase !== PHASES.ROUND_OVER && game.phase !== PHASES.GAME_OVER) return;
-    // Primero se abre el cubilete y después entra el remate de lo que pasó
-    playSfx(game.round.result.type === RESULTS.DOUBT ? 'reveal' : 'cholada');
+    // Primero se abre el cubilete y después entra el remate de lo que pasó. Se mira la misma
+    // marca que mira la escena para volcarlo, así no se destapa en silencio con la variante
+    // "Destapar en Cholada" puesta.
+    const { result } = game.round;
+    if (result.revealed) playSfx('reveal');
+    if (result.type === RESULTS.CHOLADA) playSfx('cholada');
     const { sound } = roundReaction(game);
-    if (sound) pendingSting = setTimeout(() => playSfx(sound), STING_DELAY_MS);
+    if (sound) pendingSting = setTimeout(() => stingFor(sound).forEach((key) => playSfx(key)), STING_DELAY_MS);
   });
 
   return () => {
@@ -51,4 +59,20 @@ export function connectGameSounds(store) {
     unsubscribeSignals();
     unsubscribe();
   };
+}
+
+// Las risas de cuando pillan a un mentiroso: suena una al azar, para que no canse
+const LAUGHS = ['laughMan', 'laughMan2', 'laughGranny'];
+
+// Qué efectos rematan cada desenlace. Dos de ellos suenan de a dos a la vez: al pillar a un
+// mentiroso, el brindis con la risa; al ganar la partida, el remate con el brindis.
+function stingFor(outcome) {
+  switch (outcome) {
+    case 'caught':
+      return ['cheer', LAUGHS[Math.floor(Math.random() * LAUGHS.length)]];
+    case 'win':
+      return ['win', 'cheer'];
+    default:
+      return [outcome];
+  }
 }
