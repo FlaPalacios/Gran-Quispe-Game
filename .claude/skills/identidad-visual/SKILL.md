@@ -74,8 +74,9 @@ Las variables CSS están definidas en `src/ui/styles.css`. En la capa HTML se us
 
 ## Tipografía
 
-- **Títulos (display):** Fraunces en peso 900 con el eje SOFT al máximo (serif gruesa y redondeada, la más cercana al logo del wireframe). Variable `--font-display`; en Phaser, `FONTS.display` de `src/scenes/shared/theme.js`.
-- **Interfaz (botones, listas, párrafos):** Fredoka, variable `--font-ui`; en Phaser, `FONTS.ui`.
+- **Títulos (display):** Bevan (slab serif muy gruesa, de cartel). Va en los títulos, los botones grandes (Tirar, Cantar, Creo, Desconfío, Quispe) y los números cantados. Variable `--font-display`; en Phaser, `FONTS.display` de `src/scenes/shared/theme.js`.
+- **Interfaz (descripciones, nombres de jugadores, letras QUISPE y el resto del texto):** Patua One, variable `--font-ui`; en Phaser, `FONTS.ui`.
+- Las dos vienen en **un solo peso (400)**: no se les pide negrita, porque el navegador la fingiría engordando los trazos. Ya son gruesas de por sí.
 - Ambas se cargan desde Google Fonts en `index.html`. `src/main.js` espera a que carguen antes de crear el juego.
 - Para cambiar la fuente de títulos (por ejemplo, volver a Luckiest Guy o usar Morelia con licencia): cambiar el enlace de `index.html` (o colocar el archivo en `src/assets/fonts/` con `@font-face`), `--font-display` y `FONTS.display`. Nada más debe tocarse.
 - Colores para Phaser: usar `COLORS` de `src/scenes/shared/theme.js`, nunca hex sueltos.

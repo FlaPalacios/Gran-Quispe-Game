@@ -20,9 +20,10 @@
   --color-texto-suave: #c7ab8c; /* texto secundario sobre madera */
 
   /* Cambiar solo --font-display (y FONTS.display en src/scenes/shared/theme.js) para probar otra fuente de títulos.
-     Fraunces se carga en peso 900 con el eje SOFT al máximo (index.html) */
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-ui: 'Fredoka', system-ui, sans-serif;
+     Bevan y Patua One vienen en un solo peso (400): no se les pide negrita, que el navegador
+     la fingiría engordando los trazos, y las dos ya son gruesas de por sí (index.html) */
+  --font-display: 'Bevan', Georgia, serif;
+  --font-ui: 'Patua One', Georgia, serif;
 
   --borde-grueso: 3px;
   --sombra-solida: 0 4px 0 var(--color-borde);
@@ -140,7 +141,7 @@ p {
 .btn--big {
   min-height: 60px;
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.6rem;
 }
 
@@ -185,7 +186,7 @@ p {
 
 .card__title {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.25rem;
 }
 
@@ -297,7 +298,7 @@ p {
 
 .setup__title {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.8rem;
 }
 
@@ -365,7 +366,7 @@ p {
   min-width: 2ch;
   text-align: center;
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.8rem;
 }
 
@@ -466,7 +467,7 @@ p {
 
 .pass__name {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: clamp(2.5rem, 12vw, 4.5rem);
   color: var(--color-acento);
   overflow-wrap: anywhere;
@@ -553,11 +554,12 @@ p {
 
 .turn-card__title {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.4rem;
 }
 
 .call-chip {
+  font-family: var(--font-display);
   display: inline-block;
   background: var(--color-retablo-dorado);
   border: 2px solid var(--color-borde);
@@ -569,7 +571,7 @@ p {
 
 .result__title {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 2rem;
   color: var(--color-retablo-azul);
 }
@@ -594,7 +596,7 @@ p {
 
 .result__winner {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.6rem;
 }
 
@@ -633,9 +635,12 @@ p {
   grid-template-columns: 1fr 1fr;
 }
 
+/* Bevan es bastante más ancha que la anterior y estos botones no parten la palabra:
+   "Menú principal" y "Jugar otra vez" se salían a 390 px. La letra se achica con la
+   pantalla, que es lo único que cambia aquí; la geometría la sigue poniendo layout.js. */
 .actions--two .btn--big {
   padding-inline: 0.5rem;
-  font-size: 1.35rem;
+  font-size: clamp(1rem, 4.2vw, 1.35rem);
   white-space: nowrap;
 }
 
@@ -766,7 +771,7 @@ p {
 
 .sheet__title {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.5rem;
   text-align: center;
 }
@@ -787,7 +792,7 @@ p {
   grid-column: 1 / -1;
   background: var(--color-retablo-dorado);
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.4rem;
 }
 
@@ -816,6 +821,10 @@ p {
 :root[data-juego='compacta'] .btn--big {
   min-height: 48px;
   font-size: 1.2rem;
+}
+
+:root[data-juego='compacta'] .actions--two .btn--big {
+  font-size: 1rem;
 }
 
 :root[data-juego='compacta'] .result__title {
@@ -905,7 +914,7 @@ p {
 
 .keypad__display {
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.6rem;
   line-height: 1.1;
   letter-spacing: 0.1em;
@@ -928,7 +937,7 @@ p {
   min-height: var(--tactil-min);
   padding: 0;
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   font-size: 1.35rem;
 }
 
@@ -946,7 +955,7 @@ p {
 .keypad__quispe {
   color: var(--color-texto);
   font-family: var(--font-display);
-  font-weight: 900;
+  font-weight: 400;
   background: var(--color-campo);
 }
 

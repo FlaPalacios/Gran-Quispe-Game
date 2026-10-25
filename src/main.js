@@ -38,7 +38,7 @@ const config = {
 };
 
 // Phaser dibuja el texto una sola vez: se espera a las fuentes para no quedarse con la de respaldo
-Promise.all([document.fonts.load(`900 64px ${FONTS.display}`), document.fonts.load(`400 16px ${FONTS.ui}`)])
+Promise.all([document.fonts.load(`400 64px ${FONTS.display}`), document.fonts.load(`400 16px ${FONTS.ui}`)])
   .catch(() => {})
   .finally(() => {
     const game = new Phaser.Game(config);

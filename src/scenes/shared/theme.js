@@ -2,10 +2,10 @@
 // Deben coincidir con las variables de src/ui/styles.css (skill identidad-visual).
 
 export const FONTS = Object.freeze({
-  display: 'Fraunces', // --font-display, peso 900
-  ui: 'Fredoka', // --font-ui
-  displayStack: 'Fraunces, Georgia, serif',
-  uiStack: 'Fredoka, system-ui, sans-serif',
+  display: 'Bevan', // --font-display, peso único 400
+  ui: 'Patua One', // --font-ui, peso único 400
+  displayStack: 'Bevan, Georgia, serif',
+  uiStack: '"Patua One", Georgia, serif',
 });
 
 export const COLORS = Object.freeze({
