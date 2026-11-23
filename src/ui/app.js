@@ -1,13 +1,16 @@
 // Enrutador de la capa HTML: menú → configuración → partida.
 import { playSfx } from '../app/audio.js';
 import { needsPassScreen } from '../app/gameStore.js';
+import { createOnline } from '../app/online.js';
 import { getPreference } from '../app/preferences.js';
+import { t } from '../i18n/index.js';
 import { loadGame } from '../storage/localSave.js';
 import { CallKeypad } from './CallKeypad.js';
 import { CallSheet, GameHud } from './GameHud.js';
 import { PlayIntro } from './PlayIntro.js';
 import { stopClock } from './PressureClock.js';
 import { MainMenu } from './MainMenu.js';
+import { Lobby, OnlineMenu } from './OnlineScreens.js';
 import { PassDeviceScreen } from './PassDeviceScreen.js';
 import { RulesPanel, defaultDraft } from './RulesPanel.js';
 
@@ -18,6 +21,50 @@ export function mountApp(root, store, stage) {
   let foldPlayers = Boolean(stage?.get()?.players.folded);
   // La lista plegada vive aquí y no en el HUD: si no, cada aviso del store la cerraría
   let playersOpen = false;
+
+  // Modo online: lo escrito en la pantalla de entrar, si la configuración crea una sala y
+  // cómo está la sala de espera
+  const onlineForm = { name: '', code: '', error: null, busy: false };
+  let creatingRoom = false;
+  let lobby = null;
+  const online = createOnline(store, {
+    onLobby: (next) => {
+      lobby = next;
+      if (!next.started) screen = 'lobby';
+      if (!store.get().game) render();
+    },
+    onLost: (code) => {
+      lobby = null;
+      onlineForm.error = code;
+      screen = 'online';
+      render();
+    },
+  });
+  // Si ya está en una sala (por ejemplo, falló Empezar), el error se muestra ahí mismo
+  const failOnline = (error) => {
+    onlineForm.error = error.message;
+    if (!lobby) screen = 'online';
+    render();
+  };
+  // Un pedido a la vez: un doble toque no crea dos salas ni ocupa dos asientos
+  const request = (fn) => {
+    if (onlineForm.busy) return;
+    onlineForm.busy = true;
+    onlineForm.error = null;
+    render();
+    fn()
+      .catch(failOnline)
+      .finally(() => {
+        onlineForm.busy = false;
+        render();
+      });
+  };
+  const isHost = () => Boolean(lobby?.seats.some((s) => s.host && s.id === lobby.you));
+  const leaveRoom = (next = 'menu') => {
+    online.leave();
+    lobby = null;
+    go(next);
+  };
 
   store.subscribe(() => {
     callSheetOpen = false;
@@ -49,12 +96,33 @@ export function mountApp(root, store, stage) {
     const snapshot = store.get();
     if (snapshot.game) {
       root.replaceChildren(...gameView(snapshot));
+    } else if (screen === 'lobby' && lobby) {
+      root.replaceChildren(
+        Lobby({ lobby, error: onlineForm.error, onLeave: () => leaveRoom('online'), onStart: () => request(online.start) }),
+      );
+    } else if (screen === 'online') {
+      root.replaceChildren(
+        OnlineMenu({
+          form: onlineForm,
+          onBack: () => go('menu'),
+          onCreate: () => {
+            creatingRoom = true;
+            go('setup');
+          },
+          onJoin: () => request(() => online.join(onlineForm.code.trim(), onlineForm.name.trim())),
+        }),
+      );
     } else if (screen === 'setup') {
       root.replaceChildren(
         RulesPanel({
           draft,
-          onBack: () => go('menu'),
-          onStart: (setup) => store.start(setup),
+          onBack: () => go(creatingRoom ? 'online' : 'menu'),
+          startLabel: creatingRoom ? t('online.create') : undefined,
+          // En línea, los asientos de persona que no son el tuyo los ocupa quien entre con el código
+          onStart: (setup) =>
+            creatingRoom
+              ? request(() => online.create(setup, setup.players.find((p) => !p.isBot)?.name))
+              : store.start(setup),
         }),
       );
     } else {
@@ -63,7 +131,11 @@ export function mountApp(root, store, stage) {
         MainMenu({
           canContinue: Boolean(saved),
           onContinue: () => store.resume(saved),
-          onPlay: () => go('setup'),
+          onPlay: () => {
+            creatingRoom = false;
+            go('setup');
+          },
+          onOnline: () => go('online'),
           onRefresh: render,
         }),
       );
@@ -86,17 +158,20 @@ export function mountApp(root, store, stage) {
       foldPlayers,
       playersOpen,
       onTogglePlayers: (open) => (playersOpen = open),
-      onExit: () => go('menu', () => store.leave()),
+      // En línea, salir deja la sala: el asiento se guarda un minuto y luego juega un bot
+      onExit: () => (snapshot.online ? leaveRoom() : go('menu', () => store.leave())),
       onOpenCalls: () => {
         callSheetOpen = true;
         render();
       },
-      onPlayAgain: () =>
-        store.start({
-          config: game.config,
-          players: game.players.map(({ id, name, isBot, personality }) => ({ id, name, isBot, personality })),
-        }),
-      onMenu: () => go('menu', () => store.abandon()),
+      onPlayAgain: snapshot.online
+        ? isHost() && (() => online.start().catch(() => {}))
+        : () =>
+            store.start({
+              config: game.config,
+              players: game.players.map(({ id, name, isBot, personality }) => ({ id, name, isBot, personality })),
+            }),
+      onMenu: () => (snapshot.online ? leaveRoom() : go('menu', () => store.abandon())),
       onRefresh: render,
     });
     if (!callSheetOpen) return [hud];
@@ -125,4 +200,6 @@ export function mountApp(root, store, stage) {
   }
 
   render();
+  // Si se cerró o recargó la página en medio de una partida online, se vuelve a esa sala
+  online.resume();
 }

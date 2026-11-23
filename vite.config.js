@@ -13,9 +13,14 @@ export default defineConfig({
       },
     },
   },
+  // En desarrollo con el servidor online corriendo aparte (npm run server), la conexión
+  // de los celulares pasa por Vite hasta él
+  server: {
+    proxy: { '/socket.io': { target: 'http://localhost:3000', ws: true } },
+  },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.js'],
+    include: ['src/**/*.test.js', 'server/**/*.test.js'],
     passWithNoTests: true,
   },
 });

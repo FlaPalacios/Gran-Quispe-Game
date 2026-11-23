@@ -120,6 +120,16 @@ export function isFinalDuel(state) {
   return Boolean(state.config.variants.finalDuel?.enabled) && getActivePlayers(state).length === 2;
 }
 
+// Lo que un jugador puede saber del estado (modo online: a cada celular se le manda solo
+// esto). Los dados viajan únicamente a quien los puede ver; con el comodín de espía, solo
+// el dado espiado.
+export function viewFor(state, playerId) {
+  const { dice } = state.round;
+  if (!dice || canSeeDice(state, playerId)) return state;
+  const spied = getSpiedDie(state, playerId);
+  return { ...state, round: { ...state.round, dice: spied == null ? null : [spied, null] } };
+}
+
 export function canSeeDice(state, playerId) {
   if (state.phase === PHASES.ROUND_OVER || state.phase === PHASES.GAME_OVER) return state.round.result.revealed;
   return state.phase === PHASES.CALL && playerId === state.currentPlayerId;

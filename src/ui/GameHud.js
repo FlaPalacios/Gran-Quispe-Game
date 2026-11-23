@@ -66,11 +66,11 @@ export function GameHud({
 function turnCard(snapshot, current, store, withClock) {
   const { game } = snapshot;
   const last = getLastCall(game);
-  // El turno de un bot se juega solo: el panel cuenta qué está haciendo
-  if (current?.isBot) {
+  // El turno de un bot, o en línea el de otro jugador: el panel cuenta qué está haciendo
+  if (watching(snapshot, current)) {
     const caller = last && playerName(game, last.playerId);
-    const card = panel(t('game.turnOf', { name: current.name }), t(`game.bot.${game.phase}`, { name: caller, call: last && formatCall(last.value) }));
-    card.setAttribute('role', 'status'); // para que un lector de pantalla cuente qué hace el bot
+    const card = panel(t('game.turnOf', { name: current.name }), t(`game.watch.${game.phase}`, { name: caller, call: last && formatCall(last.value) }));
+    card.setAttribute('role', 'status'); // para que un lector de pantalla cuente qué hace el otro
     return card;
   }
   switch (game.phase) {
@@ -158,7 +158,7 @@ function resultCard(game) {
 function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
   const { game } = snapshot;
   // Destapando no hay nada que hacer todavía: ni seguir a la ronda siguiente
-  if (snapshot.revealing || current?.isBot) return null;
+  if (snapshot.revealing || watching(snapshot, current)) return null;
   const send = (type) => () => store.dispatch({ type, playerId: current?.id });
   switch (game.phase) {
     case PHASES.ROLL: {
@@ -189,11 +189,12 @@ function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu })
       if (onlyBotsLeft(game)) return null;
       return h('div', { class: 'actions' }, h('button', { class: 'btn btn--primary btn--big', onClick: () => store.dispatch({ type: 'NEXT_ROUND' }) }, t('result.next')));
     case PHASES.GAME_OVER:
+      // En línea, volver a jugar lo decide solo quien creó la sala (a los demás no les llega onPlayAgain)
       return h(
         'div',
-        { class: 'actions actions--two' },
+        { class: onPlayAgain ? 'actions actions--two' : 'actions' },
         h('button', { class: 'btn btn--light btn--big', onClick: onMenu }, t('gameover.menu')),
-        h('button', { class: 'btn btn--primary btn--big', onClick: onPlayAgain }, t('gameover.again')),
+        onPlayAgain && h('button', { class: 'btn btn--primary btn--big', onClick: onPlayAgain }, t('gameover.again')),
       );
     default:
       return null;
@@ -261,6 +262,11 @@ export function CallSheet({ snapshot, store, onPick, onCancel }) {
       h('button', { class: 'btn btn--light', onClick: onCancel }, t('game.cancel')),
     ),
   );
+}
+
+// Mirar sin jugar: el turno es de un bot, o en línea es de otro celular
+function watching(snapshot, current) {
+  return Boolean(current?.isBot || (snapshot.online && current && current.id !== snapshot.viewerId));
 }
 
 // Comodín de espía: el botón mientras le quede, y lo que vio una vez usado

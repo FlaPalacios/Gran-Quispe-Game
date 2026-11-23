@@ -29,6 +29,8 @@ describe('botAction', () => {
     expect(botAction(s, { rng: fixed(0.5) })).toEqual({ type: 'ROLL', playerId: 'b0' });
     const human = newGame([{ id: 'h', name: 'Ana' }, ...bots('honest')]);
     expect(botAction(human, { rng: fixed(0.5) })).toBeNull();
+    // Con personalidad, juega por la persona (en línea, si se desconectó)
+    expect(botAction(human, { rng: fixed(0.5), personality: 'honest' })).toEqual({ type: 'ROLL', playerId: 'h' });
   });
 
   it('sin ganas de mentir canta lo que sacó', () => {

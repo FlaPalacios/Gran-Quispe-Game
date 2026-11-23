@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { SAVE_TTL_MS, clearSave, loadGame, loadSettings, saveGame, saveSettings } from './localSave.js';
+import {
+  SAVE_TTL_MS,
+  clearOnlineSeat,
+  clearSave,
+  loadGame,
+  loadOnlineSeat,
+  loadSettings,
+  saveGame,
+  saveOnlineSeat,
+  saveSettings,
+} from './localSave.js';
 
 function memoryStorage() {
   const data = new Map();
@@ -99,5 +109,17 @@ describe('localSave', () => {
     saveGame(STATE, { storage, now: 0 });
     clearSave({ storage });
     expect(loadGame({ storage, now: 0 })).toBeNull();
+  });
+});
+
+describe('asiento online', () => {
+  it('se guarda, expira a la hora y se borra', () => {
+    const storage = memoryStorage();
+    const seat = { code: 'ABCD', playerId: 'p2', token: 'xyz' };
+    saveOnlineSeat(seat, { storage, now: 0 });
+    expect(loadOnlineSeat({ storage, now: 1000 })).toEqual(seat);
+    expect(loadOnlineSeat({ storage, now: SAVE_TTL_MS + 1 })).toBeNull();
+    clearOnlineSeat({ storage });
+    expect(loadOnlineSeat({ storage, now: 0 })).toBeNull();
   });
 });

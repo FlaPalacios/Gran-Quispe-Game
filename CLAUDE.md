@@ -24,6 +24,8 @@ npm test           # tests del motor de reglas (Vitest)
 npm run test:watch # tests en modo observación
 npm run build      # build de producción en dist/
 npm run preview    # sirve el build
+npm run online     # modo online: compila y levanta el servidor en el puerto 3000 (juego + salas)
+npm run server     # solo el servidor online, para desarrollar con npm run dev al lado (Vite le pasa las conexiones)
 ```
 
 Con `npm run dev`, `http://localhost:5173/galeria.html` muestra qué assets faltan y cómo se ven (solo desarrollo, no entra al build). La lista vive en `src/dev/assetList.js` y la guía para crearlos en `recursos-fv/Fase 2 — Assets.md`.
@@ -38,9 +40,9 @@ Requiere Node 22.12 o superior.
 | Capa de UI | HTML y CSS sobre el canvas: menú, configuración, "pásale el celular" y el HUD de la partida (panel de turno, tarjetas de jugadores, botones Creo / Desconfío) |
 | Tests | Vitest, solo para `src/engine/` y `src/storage/` |
 | Guardado | localStorage con marca de tiempo, expira a la hora |
-| Backend, base de datos, autenticación | Ninguno en el MVP |
+| Backend | Solo para el modo online: `server/` (Node + Socket.IO), sin base de datos ni cuentas; las salas viven en memoria |
 | Hosting | Diferido (primero funcional en local). Luego un hosting estático gratuito |
-| A futuro (modo online) | Node.js + WebSockets (Socket.IO) reutilizando `src/engine/` sin reescribirlo |
+| Modo online | Node.js + Socket.IO reutilizando `src/engine/`, `gameStore` y los bots sin reescribirlos. Por ahora corre en la laptop de Flavio; subirlo a un hosting gratis queda para después |
 
 ## Arquitectura
 
@@ -83,6 +85,8 @@ Cada personaje tiene tres caras (`POSES`): `neutral`, `caught` (`-descubierto`: 
 
 **Reacción al terminar la ronda (`src/app/reaction.js`):** `roundReaction(game)` devuelve quién se queda en pantalla, con qué cara y qué remate suena. Lo usan la escena y los sonidos, para que la cara y el sonido no puedan contar cosas distintas.
 
+**Modo online (`server/` y `src/app/online.js`):** el servidor es quien manda. `server/rooms.js` lleva las salas (código de 4 letras sin I ni O): quien la crea la configura con el mismo panel, y los asientos de "Persona" que no son el suyo los ocupa quien entra con el código. Cada sala juega con un `createGameStore({ autoViewer: true })` y `connectBots`, igual que el celular, y a cada asiento le manda solo `viewFor(estado, asiento)`: los dados viajan únicamente a quien puede verlos. Valida que cada uno juegue solo por su asiento, lleva el reloj de presión y, si alguien se desconecta, le guarda el asiento 60 s y después juega por él un bot honesto hasta que vuelva (con el token guardado en `localSave`, también tras recargar). En el celular, `createOnline(store)` conecta y pone el store en modo remoto (`useRemote`): las acciones van al servidor, el estado llega por `receive` (con el destape, sonidos y escena de siempre) y no hay pantalla de pase; mientras juega otro, el HUD solo muestra qué está haciendo. `server/index.js` sirve además `dist/`, así que con `npm run online` se juega desde `http://<IP de la laptop>:3000`.
+
 **Depurar en el navegador:** en `npm run dev`, `window.__game` (Phaser) y `window.__store` están disponibles en la consola.
 
 ## Referencia visual y diseño responsivo
@@ -124,6 +128,7 @@ src/
     characters.js      # qué personaje le toca a cada jugador, y sus caras
     reaction.js        # quién reacciona al terminar la ronda, con qué cara y qué sonido
     botPlayer.js       # juega solo el turno de los bots, con pausas para que se vea
+    online.js          # conexión con el servidor del modo online
     preferences.js     # silencio y siluetas, guardados entre partidas
   scenes/              # CantinaScene: la mesa en los tres escenarios (cambia el fondo según config.scenario; personajes solo en la cantina)
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
@@ -132,11 +137,15 @@ src/
     CallKeypad.js      # teclado para cantar (por defecto); CallSheet es la lista completa
     PressureClock.js   # el reloj, compartido por el panel de turno y el teclado
     PlayIntro.js       # entrada en túnel al empezar la partida
+    OnlineScreens.js   # unirse o crear una sala, y la sala de espera
   assets/
     images/{cantina,bar,andino,shared}/
     audio/
     fonts/
-  storage/localSave.js # único punto que toca localStorage
+  storage/localSave.js # único punto que toca localStorage (partida, ajustes y asiento online)
+server/
+  index.js             # servidor HTTP (sirve dist/) + Socket.IO
+  rooms.js             # salas online: asientos, estado filtrado por jugador, reloj y desconexiones
   i18n/                # index.js con t(); es.json (en.json y qu.json para la Fase 5)
 .claude/
   agents/              # game-logic, phaser-scenes, code-reviewer
@@ -288,7 +297,7 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 ### Fase 5: Después del MVP
 
 - [ ] Inglés y términos en quechua, con selector de idioma
-- [ ] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular
+- [x] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular (en la laptop; falta subirlo a un hosting)
 
 ## Riesgos
 

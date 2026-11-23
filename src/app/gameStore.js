@@ -19,6 +19,11 @@ export function createGameStore({
   clear = clearSave,
   now = Date.now,
   revealMs = () => null,
+  // autoViewer: el turno se confirma solo, sin pantalla de pase (la partida del servidor)
+  autoViewer = false,
+  // remote: modo online en el celular. Las acciones y las sacudidas se mandan al servidor,
+  // y el estado llega por receive(), ya filtrado para este jugador.
+  remote = null,
 } = {}) {
   let game = null;
   let viewerId = null;
@@ -31,7 +36,7 @@ export function createGameStore({
   const listeners = new Set();
   const signalListeners = new Set();
 
-  const snapshot = () => ({ game, viewerId, turnStartedAt, revealing, playersBefore });
+  const snapshot = () => ({ game, viewerId, turnStartedAt, revealing, playersBefore, online: Boolean(remote) });
   const notify = () => {
     skipLonePass();
     listeners.forEach((fn) => fn(snapshot()));
@@ -41,13 +46,21 @@ export function createGameStore({
   // su turno se confirma solo, y su reloj de presión arranca en ese momento
   function skipLonePass() {
     const current = game?.players.find((p) => p.id === game.currentPlayerId);
-    if (!current || current.isBot || viewerId === current.id) return;
-    if (game.players.filter((p) => !p.isBot && !p.eliminated).length !== 1) return;
+    if (remote || !current || current.isBot || viewerId === current.id) return;
+    if (!autoViewer && game.players.filter((p) => !p.isBot && !p.eliminated).length !== 1) return;
     viewerId = current.id;
     turnStartedAt = now();
   }
-  const signal = (name) => signalListeners.forEach((fn) => fn(name));
-  const persist = () => (game.phase === PHASES.GAME_OVER ? clear() : save(game));
+  const emit = (name) => signalListeners.forEach((fn) => fn(name));
+  // En línea la sacudida va al servidor, que la reparte a todos (también a quien sacude)
+  const signal = (name) => (remote && name === 'cupShake' ? remote.shake() : emit(name));
+  const persist = () => (remote ? null : game.phase === PHASES.GAME_OVER ? clear() : save(game));
+
+  // Acaba de terminar la ronda y hay que destapar: suspenso hasta que el cubilete suba
+  function followReveal(before) {
+    if (before && !before.round.result && game.round.result?.revealed) startReveal(before.players);
+    else if (!game.round.result) stopReveal();
+  }
 
   // Al destapar, el cubilete tarda en levantarse y hasta que termina no se muestra nada del
   // resultado: ni los dados, ni el panel, ni la cara de quien ganó o perdió.
@@ -83,7 +96,7 @@ export function createGameStore({
       stopReveal();
       persist();
       notify();
-      signal('gameStart');
+      emit('gameStart');
     },
 
     resume(savedGame) {
@@ -95,6 +108,7 @@ export function createGameStore({
     },
 
     dispatch(action) {
+      if (remote) return remote.dispatch(action);
       const before = game;
       game = applyAction(game, action, { rng });
       if (game.currentPlayerId !== before.currentPlayerId) {
@@ -105,10 +119,33 @@ export function createGameStore({
         // El plazo para cantar empieza cuando los dados ya cayeron
         turnStartedAt = now();
       }
-      // Acaba de terminar la ronda y hay que destapar: suspenso hasta que el cubilete suba
-      if (!before.round.result && game.round.result?.revealed) startReveal(before.players);
-      else if (!game.round.result) stopReveal();
+      followReveal(before);
       persist();
+      notify();
+    },
+
+    // En línea: el estado que manda el servidor, ya sin lo que este jugador no puede ver.
+    // `you` es su asiento; `elapsed`, cuánto lleva su turno (para el reloj de presión), en
+    // vez de una hora, porque los relojes del servidor y del celular no coinciden.
+    receive(next, { you, elapsed = null } = {}) {
+      const before = game;
+      game = next;
+      viewerId = you;
+      turnStartedAt = elapsed == null ? null : now() - elapsed;
+      followReveal(before);
+      notify();
+    },
+
+    // En línea: un aviso que reparte el servidor ('cupShake', 'gameStart')
+    receiveSignal: emit,
+
+    // Entra (con la conexión al servidor) o sale (con null) del modo online
+    useRemote(next) {
+      remote = next;
+      game = null;
+      viewerId = null;
+      turnStartedAt = null;
+      stopReveal();
       notify();
     },
 
@@ -147,8 +184,9 @@ export function createGameStore({
 
 // La pantalla de pase se muestra cuando le toca a alguien que aún no confirmó que tiene el celular
 // Los bots no miran la pantalla: su turno se juega a la vista de todos sin mostrar sus dados
-export function needsPassScreen({ game, viewerId }) {
-  if (!game || !game.currentPlayerId) return false;
+// En línea tampoco: cada uno juega desde su celular.
+export function needsPassScreen({ game, viewerId, online }) {
+  if (online || !game || !game.currentPlayerId) return false;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
   return !current?.isBot && viewerId !== game.currentPlayerId;
 }

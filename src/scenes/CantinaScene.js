@@ -237,9 +237,10 @@ export class CantinaScene extends Phaser.Scene {
     const showDice = viewerCanSeeDice(snapshot);
     // El cubilete se levanta también mientras dura el destape, aunque los dados todavía no
     // se vean: es justo lo que están mirando todos.
-    // Un bot que canta también levanta el cubilete para mirar, aunque sus dados no se dibujen
-    const botPeeking = game.phase === PHASES.CALL && game.players.find((p) => p.id === game.currentPlayerId)?.isBot;
-    const opening = showDice || botPeeking || (revealing && game.round.result?.revealed);
+    // Quien canta levanta el cubilete para mirar: si es un bot o (en línea) otro jugador, se
+    // ve el gesto pero no sus dados, que solo se dibujan con showDice
+    const peeking = game.phase === PHASES.CALL;
+    const opening = showDice || peeking || (revealing && game.round.result?.revealed);
     const justRolled = this.lastPhase === PHASES.ROLL && game.phase === PHASES.CALL;
     // Solo se anima al cambiar de momento: así el aviso de que terminó el destape no hace
     // que el cubilete vuelva a su sitio para levantarse de nuevo.
@@ -261,7 +262,7 @@ export class CantinaScene extends Phaser.Scene {
         { y: rest.y, duration: 90, ease: 'Quad.easeIn' },
       ];
       const [lift, ...afterLift] = this.liftTweens(pose);
-      const tweens = showDice || botPeeking ? [...slam, { ...lift, delay: 220 }, ...afterLift] : slam;
+      const tweens = peeking ? [...slam, { ...lift, delay: 220 }, ...afterLift] : slam;
       this.tweens.chain({ targets: this.cup, tweens });
       return;
     }

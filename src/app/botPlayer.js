@@ -33,9 +33,10 @@ export function connectBots(store, { rng = Math.random } = {}) {
 
   const unsubscribe = store.subscribe(onState);
 
-  function onState({ game, revealing }) {
+  // En línea, a los bots los juega el servidor
+  function onState({ game, revealing, online }) {
     clearTimeout(timer);
-    if (!game || revealing) return;
+    if (!game || revealing || online) return;
 
     const current = game.players.find((p) => p.id === game.currentPlayerId);
     if (current?.isBot) {

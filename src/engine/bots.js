@@ -15,12 +15,16 @@ export const PERSONALITIES = Object.freeze({
 
 const TOP = CALL_SCALE.length - 1;
 
-// La acción del bot al que le toca, o null si no le toca hacer nada (ronda terminada)
-export function botAction(state, { rng }) {
+// La acción del bot al que le toca, o null si no le toca a un bot (o la ronda terminó).
+// Con `personality`, juega por quien esté en turno aunque sea una persona: en línea, por
+// alguien que se desconectó.
+export function botAction(state, { rng, personality } = {}) {
   const playerId = state.currentPlayerId;
-  const bot = state.players.find((p) => p.id === playerId);
-  if (!bot?.isBot) return null;
-  const traits = PERSONALITIES[bot.personality] ?? PERSONALITIES.honest;
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || (!player.isBot && !personality)) return null;
+  // hasOwn: un id como 'toString' no debe colarse como personalidad
+  const id = personality ?? player.personality;
+  const traits = Object.hasOwn(PERSONALITIES, id) ? PERSONALITIES[id] : PERSONALITIES.honest;
   switch (state.phase) {
     case PHASES.ROLL:
       return { type: 'ROLL', playerId };

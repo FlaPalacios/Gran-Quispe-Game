@@ -12,6 +12,7 @@ import {
   canSpy,
   getSpiedDie,
   isFinalDuel,
+  viewFor,
 } from './rules.js';
 
 // rng que devuelve los valores en orden; para un dado d se usa (d - 1) / 6
@@ -601,5 +602,31 @@ describe('Duelo final', () => {
   it('desactivado, perder una ronda con dos jugadores solo suma una letra', () => {
     const s = loseRound(newGame({ players: PLAYERS.slice(0, 2) }), 'ana');
     expect(s.players[0]).toMatchObject({ letters: 1, eliminated: false });
+  });
+});
+
+describe('viewFor (lo que se le manda a cada jugador en línea)', () => {
+  it('los dados solo le llegan a quien puede verlos', () => {
+    let s = rollAs(newGame(), 'ana', [4, 2]);
+    expect(viewFor(s, 'ana').round.dice).toEqual([4, 2]);
+    expect(viewFor(s, 'beto').round.dice).toBeNull();
+    expect(s.round.dice).toEqual([4, 2]); // el estado original no se toca
+    s = act(s, 'CALL', 'ana', 42);
+    expect(viewFor(s, 'ana').round.dice).toBeNull();
+    s = act(s, 'DOUBT', 'beto');
+    expect(viewFor(s, 'cata').round.dice).toEqual([4, 2]); // destapado para todos
+  });
+
+  it('con el comodín de espía llega solo el dado espiado', () => {
+    let s = act(rollAs(newGame({ variants: { spyWildcard: { enabled: true } } }), 'ana', [6, 3]), 'CALL', 'ana', 42);
+    s = act(s, 'SPY', 'beto');
+    expect(viewFor(s, 'beto').round.dice).toEqual([6, null]);
+    expect(viewFor(s, 'cata').round.dice).toBeNull();
+  });
+
+  it('en una Cholada sin destape nadie recibe los dados', () => {
+    let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 62);
+    s = act(rollAs(act(s, 'BELIEVE', 'beto'), 'beto', [3, 1]), 'CALL', 'beto', 54);
+    expect(viewFor(s, 'beto').round.dice).toBeNull();
   });
 });

@@ -74,3 +74,32 @@ export function clearSave({ storage = defaultStorage() } = {}) {
     // nada que limpiar
   }
 }
+
+// Modo online: el asiento en la sala (código, jugador y token), para volver a él si se recarga
+// la página. Dura lo mismo que una partida guardada; el servidor decide si la sala sigue viva.
+const SEAT_KEY = 'gran-quispe:asiento-online';
+
+export function saveOnlineSeat(seat, { storage = defaultStorage(), now = Date.now() } = {}) {
+  try {
+    storage?.setItem(SEAT_KEY, JSON.stringify({ savedAt: now, seat }));
+  } catch {
+    // Sin guardado, una recarga deja la sala; al minuto juega un bot por este asiento
+  }
+}
+
+export function loadOnlineSeat({ storage = defaultStorage(), now = Date.now() } = {}) {
+  try {
+    const { savedAt, seat } = JSON.parse(storage?.getItem(SEAT_KEY) ?? 'null') ?? {};
+    return now - savedAt <= SAVE_TTL_MS && typeof seat?.token === 'string' ? seat : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearOnlineSeat({ storage = defaultStorage() } = {}) {
+  try {
+    storage?.removeItem(SEAT_KEY);
+  } catch {
+    // nada que limpiar
+  }
+}

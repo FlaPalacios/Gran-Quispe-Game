@@ -47,7 +47,8 @@ export function draftToSetup(draft) {
   };
 }
 
-export function RulesPanel({ draft, onBack, onStart }) {
+// startLabel: el texto del botón final ("Guardar y jugar", o "Crear sala" en línea)
+export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start') }) {
   const root = h('main', { class: 'screen setup' });
   const update = (fn) => {
     fn(draft);
@@ -76,7 +77,7 @@ export function RulesPanel({ draft, onBack, onStart }) {
       h(
         'footer',
         { class: 'setup__footer' },
-        h('button', { class: 'btn btn--primary btn--big', onClick: () => onStart(draftToSetup(draft)) }, t('setup.start')),
+        h('button', { class: 'btn btn--primary btn--big', onClick: () => onStart(draftToSetup(draft)) }, startLabel),
       ),
     );
   }
@@ -258,7 +259,7 @@ export function RulesPanel({ draft, onBack, onStart }) {
   return root;
 }
 
-function card(title, ...children) {
+export function card(title, ...children) {
   return h('section', { class: 'card' }, h('h2', { class: 'card__title' }, title), ...children);
 }
 

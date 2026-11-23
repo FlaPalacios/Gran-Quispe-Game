@@ -376,6 +376,43 @@ p {
   gap: 0.5rem;
 }
 
+/* ---------- Modo online ---------- */
+
+.online__hint {
+  color: var(--color-texto-suave);
+}
+
+.online__error {
+  padding: 0.75rem 1rem;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 12px;
+  background: var(--color-retablo-rojo);
+  color: var(--color-texto);
+}
+
+.online__code,
+.online__code-input {
+  font-family: var(--font-display);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.online__code {
+  font-size: 3rem;
+  text-align: center;
+  color: var(--color-acento);
+}
+
+.online__seats {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.online__seat.is-free {
+  color: var(--color-texto-suave);
+}
+
 /* Un asiento: el nombre y quién lo juega (persona o bot) */
 .seat {
   display: grid;

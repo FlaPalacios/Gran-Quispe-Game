@@ -4,7 +4,7 @@ import { t } from '../i18n/index.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 
-export function MainMenu({ canContinue, onContinue, onPlay, onRefresh }) {
+export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onRefresh }) {
   return h(
     'main',
     { class: 'screen menu' },
@@ -21,7 +21,8 @@ export function MainMenu({ canContinue, onContinue, onPlay, onRefresh }) {
         h('span', { 'aria-hidden': 'true' }, '▶ '),
         t('menu.play'),
       ),
-      canContinue && h('button', { class: 'btn btn--secondary', onClick: onContinue }, t('menu.continue')),
+      h('button', { class: 'btn btn--secondary', onClick: onOnline }, t('menu.online')),
+      canContinue && h('button', { class: 'btn btn--light', onClick: onContinue }, t('menu.continue')),
     ),
   );
 }
