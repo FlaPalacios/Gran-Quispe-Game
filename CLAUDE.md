@@ -122,7 +122,7 @@ src/
     characters.js      # qué personaje le toca a cada jugador, y sus caras
     reaction.js        # quién reacciona al terminar la ronda, con qué cara y qué sonido
     preferences.js     # silencio y siluetas, guardados entre partidas
-  scenes/              # CantinaScene, BarScene, AndinoScene
+  scenes/              # CantinaScene: la mesa en los tres escenarios (cambia el fondo según config.scenario; personajes solo en la cantina)
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
   dev/                 # galería de assets (solo desarrollo)
   ui/                  # app.js (enrutador), MainMenu, RulesPanel, PassDeviceScreen, GameHud, styles.css
@@ -271,7 +271,7 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 
 ### Fase 3: Escenarios y panel de reglas completos
 
-- [ ] Bar universitario y paisaje andino (sin personajes), con selector de escenario
+- [x] Bar y valle andino (sin personajes), con selector de escenario en la configuración (`config.scenario`: `cantina`, `bar` o `andino`)
 - [x] Registro de variantes y panel de configuración generado desde él (celular y PC)
 - [x] Variantes que faltan, con tests: Comodín de espía y Duelo final
 
@@ -300,4 +300,4 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 
 Preguntar al usuario antes de implementar lo que dependa de estos puntos. Al resolverse, moverlos a la sección de reglas correspondiente.
 
-Ninguna por ahora. Resueltas el 2026-10-20: "Quispe vale más" queda como variante apagable, encendida por defecto; en el Duelo final cualquier derrota elimina y el costo extra del Quispe no cambia nada.
+Ninguna por ahora. Resuelto el 2026-11-23: el Duelo final vale también en una partida de 2 jugadores desde la primera ronda (toda la partida es a muerte súbita). Resueltas el 2026-10-20: "Quispe vale más" queda como variante apagable, encendida por defecto; en el Duelo final cualquier derrota elimina y el costo extra del Quispe no cambia nada.

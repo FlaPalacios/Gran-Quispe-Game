@@ -1,8 +1,9 @@
 // Carga de imágenes para Phaser.
 // Vite devuelve la URL final (con hash), así que no se escriben rutas a mano.
 import { CHARACTER_COUNT, POSES, portraitKey, portraitUrl } from '../../app/characters.js';
+import { SCENARIOS } from '../../engine/rules.js';
 
-const backgrounds = import.meta.glob('../../assets/images/*/*-fondo.{webp,png,jpg}', {
+const backgrounds = import.meta.glob('../../assets/images/*/*-fondo.webp', {
   eager: true,
   query: '?url',
   import: 'default',
@@ -14,11 +15,14 @@ const objects = import.meta.glob('../../assets/images/shared/*.{webp,png}', {
 });
 
 export const KEYS = Object.freeze({
-  cantinaBackground: 'cantina-fondo',
   table: 'mesa',
   // Las tres poses del cubilete, recortadas a la misma escala y sobre su punto de apoyo
   cupPoses: Object.freeze({ closed: 'cubilete-tapado', peek: 'cubilete-inclinado', open: 'cubilete-volcado' }),
 });
+
+// Fondo de cada escenario: src/assets/images/<escenario>/<escenario>-fondo.webp
+export const backgroundKey = (scenario) => `${scenario}-fondo`;
+export const backgroundUrl = (scenario) => backgrounds[`../../assets/images/${scenario}/${backgroundKey(scenario)}.webp`];
 
 export const DIE_VALUES = Object.freeze([1, 2, 3, 4, 5, 6]);
 export const dieKey = (value) => `dado-${value}`;
@@ -42,8 +46,9 @@ function queuePortraits(scene, characters, poses, asked) {
 }
 
 export function preloadCantina(scene) {
-  const background = backgrounds['../../assets/images/cantina/cantina-fondo.webp'];
-  if (background) scene.load.image(KEYS.cantinaBackground, background);
+  // Solo el fondo del menú (la cantina); el de otro escenario se pide al empezar su partida
+  const menu = backgroundUrl(SCENARIOS[0]);
+  if (menu) scene.load.image(backgroundKey(SCENARIOS[0]), menu);
 
   // Mesa, cubilete y dados. Lo que falte lo dibuja la escena en vectorial.
   for (const name of [KEYS.table, ...Object.values(KEYS.cupPoses), ...DIE_VALUES.map(dieKey)]) {

@@ -13,6 +13,13 @@ export const EXPECTED_ASSETS = [
     ],
   },
   {
+    group: 'Otros escenarios (sin personajes)',
+    items: [
+      { path: 'images/bar/bar-fondo.webp', size: '2560 x 2560 px', note: 'Bar de noche, sin personas ni mesa' },
+      { path: 'images/andino/andino-fondo.webp', size: '2560 x 2560 px', note: 'Valle andino al atardecer, sin personas ni mesa' },
+    ],
+  },
+  {
     group: 'Cantina',
     items: [
       { path: 'images/cantina/cantina-fondo.webp', size: '2560 x 2560 px', note: 'Interior sin personajes ni mesa; lo importante al centro' },

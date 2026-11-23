@@ -1,12 +1,12 @@
 // Motor de reglas: máquina de estados pura.
 // Sin Phaser, sin DOM, sin localStorage, sin Math.random directo:
 // el azar se inyecta (ctx.rng) para poder testear y, a futuro, correrlo en el servidor.
-import { CHOLADA_REASONS, PHASES, RESULTS } from './constants.js';
+import { CHOLADA_REASONS, PHASES, RESULTS, SCENARIOS } from './constants.js';
 import { QUISPE, compareCalls, isValidCall, isWrittenCall, readDice, rollDice } from './dice.js';
 import { DEFAULT_LIVES, MAX_LIVES, MIN_LIVES, getMode } from './modes.js';
 import { lossCost, resolveVariants, revealsDice } from './variants.js';
 
-export { CHOLADA_REASONS, PHASES, RESULTS };
+export { CHOLADA_REASONS, PHASES, RESULTS, SCENARIOS };
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 8;
@@ -42,7 +42,10 @@ export function createGame({ config, players }, { rng } = {}) {
   const penaltyText = config.penaltyText ?? '';
   if (typeof penaltyText !== 'string') throw new TypeError('El texto de castigo debe ser texto');
 
-  const fullConfig = { mode: config.mode, lives, penaltyText, variants: resolveVariants(config.variants) };
+  const scenario = config.scenario ?? SCENARIOS[0];
+  if (!SCENARIOS.includes(scenario)) throw new RangeError(`Escenario desconocido: ${scenario}`);
+
+  const fullConfig = { mode: config.mode, lives, penaltyText, scenario, variants: resolveVariants(config.variants) };
   const openerIndex = Math.floor(rng() * players.length);
   if (!(openerIndex >= 0 && openerIndex < players.length)) throw new RangeError('rng debe devolver un valor en [0, 1)');
   const openerId = players[openerIndex].id;

@@ -3,12 +3,13 @@ import { characterIndexFor, portraitKey } from '../app/characters.js';
 import { needsPassScreen, viewerCanSeeDice } from '../app/gameStore.js';
 import { getPreference } from '../app/preferences.js';
 import { roundReaction } from '../app/reaction.js';
-import { PHASES } from '../engine/rules.js';
-import { DIE_VALUES, KEYS, dieKey, preloadCantina, queuePortraitPoses } from './shared/assets.js';
+import { PHASES, SCENARIOS } from '../engine/rules.js';
+import { DIE_VALUES, KEYS, backgroundKey, backgroundUrl, dieKey, preloadCantina, queuePortraitPoses } from './shared/assets.js';
 import { coverImage, drawCup, drawDie, drawRoundTable, drawSoftShadow, drawSunburst, drawTableShadow, tableProps } from './shared/props.js';
 import { COLORS, OUTLINE_WIDTH } from './shared/theme.js';
 
-// Escenario principal: cantina nocturna cusqueña.
+// La mesa de juego en cualquiera de los escenarios (cantina, bar y valle andino): cambia el
+// fondo según la partida, y solo la cantina tiene personajes. El menú se ve sobre la cantina.
 // Dibuja únicamente dentro de la zona `scene` que publica src/app/stage.js; lo que queda
 // fuera del marco es zona muerta (el mismo fondo, desenfocado y apagado).
 
@@ -40,6 +41,11 @@ const CHARACTER_WIDTH = 0.52;
 // Si no cabe ni esto (pantalla baja con ocho tarjetas), es mejor no dibujarlo que dejar un muñequito
 const CHARACTER_MIN_HEIGHT = 96;
 
+// Personajes solo en la cantina; bar y valle andino son pura ambientación
+// Las partidas guardadas antes de los escenarios no lo traen: se jugaban en la cantina
+const scenarioOf = (game) => game?.config.scenario ?? SCENARIOS[0];
+const hasCharacters = (game) => scenarioOf(game) === 'cantina';
+
 // Rectángulo agrandado un porcentaje por cada lado
 const bleed = (area, ratio) => ({
   x: area.x - area.width * ratio,
@@ -60,14 +66,15 @@ export class CantinaScene extends Phaser.Scene {
   create() {
     this.store = this.registry.get('store');
     this.stage = this.registry.get('stage');
-    const hasBackground = this.textures.exists(KEYS.cantinaBackground);
+    const menuBackground = backgroundKey(SCENARIOS[0]);
+    const hasBackground = this.textures.exists(menuBackground);
 
     // Respaldo vectorial por si el fondo ilustrado no está disponible
     this.fallback = this.add.graphics().setDepth(DEPTHS.backdrop);
 
     // Zona muerta: el mismo fondo cubriendo toda la ventana, desenfocado y oscurecido
     this.backdrop = hasBackground
-      ? this.add.image(0, 0, KEYS.cantinaBackground).setDepth(DEPTHS.backdrop)
+      ? this.add.image(0, 0, menuBackground).setDepth(DEPTHS.backdrop)
       : null;
     this.blurBackdrop();
     this.backdropDim = this.add.graphics().setDepth(DEPTHS.backdropDim);
@@ -77,7 +84,7 @@ export class CantinaScene extends Phaser.Scene {
     const mask = this.maskShape.createGeometryMask();
 
     this.background = hasBackground
-      ? this.add.image(0, 0, KEYS.cantinaBackground).setDepth(DEPTHS.background).setMask(mask)
+      ? this.add.image(0, 0, menuBackground).setDepth(DEPTHS.background).setMask(mask)
       : null;
     this.sceneDim = this.add.graphics().setDepth(DEPTHS.sceneDim);
     this.edge = this.add.graphics().setDepth(DEPTHS.edge);
@@ -109,6 +116,7 @@ export class CantinaScene extends Phaser.Scene {
     );
     this.lastPhase = null;
     this.posesAsked = new Set();
+    this.backgroundsAsked = new Set();
 
     // Las medidas salen del stage, nunca de la ventana: él avisa al suscribirse y en cada cambio
     const unsubscribeStage = this.stage.subscribe((layout) => this.useLayout(layout));
@@ -182,6 +190,18 @@ export class CantinaScene extends Phaser.Scene {
   // Las caras de reacción solo salen al terminar una ronda: se piden al empezar la partida,
   // y solo las de los personajes que juegan, para no gastar datos de más. Cuando llegan se
   // vuelve a dibujar el personaje, por si ya tocaba usarlas.
+  // El fondo de un escenario que no es el del menú se pide al empezar su partida. Mientras
+  // llega se ve la cantina; al llegar, useScenario lo pone.
+  requestBackground(game) {
+    const key = backgroundKey(scenarioOf(game));
+    const url = backgroundUrl(scenarioOf(game));
+    if (!url || this.textures.exists(key) || this.backgroundsAsked.has(key)) return;
+    this.backgroundsAsked.add(key);
+    this.load.image(key, url);
+    this.load.once('complete', () => this.redraw());
+    this.load.start();
+  }
+
   requestPoses(game) {
     const characters = game.players.map((_, seat) => characterIndexFor(seat));
     if (!queuePortraitPoses(this, characters, this.posesAsked)) return;
@@ -193,7 +213,13 @@ export class CantinaScene extends Phaser.Scene {
     if (!this.area) return;
     const { game, revealing } = snapshot;
     const inGame = Boolean(game);
-    if (inGame) this.requestPoses(game);
+    // Si cambió el escenario, se cambia el fondo y se vuelve a medir todo (redraw llama a sync)
+    if (this.useScenario(game)) {
+      this.redraw();
+      return;
+    }
+    if (inGame) this.requestBackground(game);
+    if (inGame && hasCharacters(game)) this.requestPoses(game);
     // Cortar animaciones antes que nada: una animación viva podría volver a mostrar los dados
     this.tweens.killTweensOf(this.cup);
     this.paintOverlays(inGame);
@@ -350,9 +376,18 @@ export class CantinaScene extends Phaser.Scene {
     this.dice.forEach((d) => d.setVisible(visible));
   }
 
+  // Pone el fondo del escenario de la partida. Devuelve true si cambió.
+  useScenario(game) {
+    const key = backgroundKey(scenarioOf(game));
+    if (!this.background || this.background.texture.key === key || !this.textures.exists(key)) return false;
+    this.background.setTexture(key);
+    this.backdrop.setTexture(key);
+    return true;
+  }
+
   // Muestra al jugador en turno sentado al otro lado de la mesa, centrado sobre ella.
   showCharacter(game, revealing) {
-    const who = this.characterOnScreen(game, revealing);
+    const who = hasCharacters(game) ? this.characterOnScreen(game, revealing) : null;
     const seat = who ? game.players.findIndex((p) => p.id === who.playerId) : -1;
     if (seat < 0 || !this.props) {
       this.hideCharacter();

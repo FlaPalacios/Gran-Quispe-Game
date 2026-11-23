@@ -14,6 +14,10 @@ export const RESULTS = Object.freeze({
   BELIEVED_QUISPE: 'BELIEVED_QUISPE', // creyó un Quispe: no se equivocó en nada, simplemente pierde
 });
 
+// Escenarios de la mesa. No cambian ninguna regla: viajan en la config para que una partida
+// guardada se retome donde se jugaba.
+export const SCENARIOS = Object.freeze(['cantina', 'bar', 'andino']);
+
 export const CHOLADA_REASONS = Object.freeze({
   LOWER_CALL: 'LOWER_CALL', // cantó igual o más bajo que la jugada anterior
   TIMEOUT: 'TIMEOUT', // se acabó el reloj de presión sin decidir

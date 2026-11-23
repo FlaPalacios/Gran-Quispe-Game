@@ -4,8 +4,6 @@ import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
 import { createStage } from './app/stage.js';
 import { CantinaScene } from './scenes/CantinaScene.js';
-import { BarScene } from './scenes/BarScene.js';
-import { AndinoScene } from './scenes/AndinoScene.js';
 import { COLORS, FONTS, toCss } from './scenes/shared/theme.js';
 import { mountApp } from './ui/app.js';
 
@@ -30,7 +28,7 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
   },
-  scene: [CantinaScene, BarScene, AndinoScene],
+  scene: [CantinaScene],
   callbacks: {
     // Las escenas leen el estado del juego y las zonas desde el registro
     preBoot: (game) => game.registry.set({ store, stage }),

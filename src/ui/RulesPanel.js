@@ -3,7 +3,7 @@
 // solo sus textos en i18n.
 import { getPreference, setPreference } from '../app/preferences.js';
 import { MAX_LIVES, MIN_LIVES, DEFAULT_LIVES, MODES } from '../engine/modes.js';
-import { MAX_PLAYERS, MIN_PLAYERS } from '../engine/rules.js';
+import { MAX_PLAYERS, MIN_PLAYERS, SCENARIOS } from '../engine/rules.js';
 import { VARIANTS, resolveVariants } from '../engine/variants.js';
 import { t } from '../i18n/index.js';
 import { h } from './dom.js';
@@ -13,6 +13,7 @@ const DEFAULT_PLAYER_COUNT = 4;
 export function defaultDraft() {
   return {
     mode: 'classic',
+    scenario: SCENARIOS[0],
     lives: DEFAULT_LIVES,
     penaltyText: '',
     names: Array.from({ length: DEFAULT_PLAYER_COUNT }, () => ''),
@@ -23,7 +24,13 @@ export function defaultDraft() {
 // Convierte el borrador del panel en la entrada de createGame
 export function draftToSetup(draft) {
   return {
-    config: { mode: draft.mode, lives: draft.lives, penaltyText: draft.penaltyText.trim(), variants: draft.variants },
+    config: {
+      mode: draft.mode,
+      scenario: draft.scenario,
+      lives: draft.lives,
+      penaltyText: draft.penaltyText.trim(),
+      variants: draft.variants,
+    },
     players: draft.names.map((name, i) => ({
       id: `p${i + 1}`,
       name: name.trim() || t('setup.defaultName', { n: i + 1 }),
@@ -50,6 +57,7 @@ export function RulesPanel({ draft, onBack, onStart }) {
         'div',
         { class: 'setup__body' },
         modeCard(),
+        scenarioCard(),
         playersCard(),
         draft.mode === 'lives' && livesCard(),
         draft.mode === 'penalty' && penaltyCard(),
@@ -65,23 +73,29 @@ export function RulesPanel({ draft, onBack, onStart }) {
   }
 
   function modeCard() {
-    return card(
-      t('setup.mode'),
-      h(
-        'div',
-        { class: 'segmented', role: 'radiogroup', 'aria-label': t('setup.mode') },
-        Object.keys(MODES).map((mode) =>
-          h(
-            'button',
-            {
-              class: `segmented__option${draft.mode === mode ? ' is-selected' : ''}`,
-              role: 'radio',
-              'aria-checked': String(draft.mode === mode),
-              onClick: () => update((d) => (d.mode = mode)),
-            },
-            h('strong', {}, t(`mode.${mode}`)),
-            h('small', {}, t(`mode.${mode}.hint`)),
-          ),
+    return card(t('setup.mode'), segmented('setup.mode', Object.keys(MODES), 'mode', 'mode'));
+  }
+
+  function scenarioCard() {
+    return card(t('setup.scenario'), segmented('setup.scenario', SCENARIOS, 'scenario', 'scenario'));
+  }
+
+  // Botones de elegir uno solo: `field` es la clave del borrador y `prefix` la de sus textos
+  function segmented(label, options, field, prefix) {
+    return h(
+      'div',
+      { class: 'segmented', role: 'radiogroup', 'aria-label': t(label) },
+      options.map((option) =>
+        h(
+          'button',
+          {
+            class: `segmented__option${draft[field] === option ? ' is-selected' : ''}`,
+            role: 'radio',
+            'aria-checked': String(draft[field] === option),
+            onClick: () => update((d) => (d[field] = option)),
+          },
+          h('strong', {}, t(`${prefix}.${option}`)),
+          h('small', {}, t(`${prefix}.${option}.hint`)),
         ),
       ),
     );

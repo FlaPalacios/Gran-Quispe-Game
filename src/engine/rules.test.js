@@ -49,6 +49,12 @@ function deepFreeze(obj) {
 }
 
 describe('createGame', () => {
+  it('el escenario viaja en la config: cantina por defecto, y solo los conocidos', () => {
+    expect(newGame().config.scenario).toBe('cantina');
+    expect(newGame({ scenario: 'andino' }).config.scenario).toBe('andino');
+    expect(() => newGame({ scenario: 'playa' })).toThrow(RangeError);
+  });
+
   it('crea jugadores con marcador según el modo', () => {
     const classic = newGame();
     expect(classic.players.every((p) => p.letters === 0 && !p.eliminated)).toBe(true);

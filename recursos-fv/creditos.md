@@ -6,6 +6,8 @@
 | --- | --- | --- |
 | `images/shared/logo.webp` | Logo de Flavio (`recursos-fv/Gran_Quispe_logo.png`), recortado con transparencia y escalado a 1100 px (script en `Fase 2 — Assets.md`) | Propio |
 | `images/cantina/cantina-fondo.webp` | Generado con ChatGPT por Flavio (`recursos-fv/graficos/Fondo1_Cantina_andina.png`), escalado a 2560 px | Propio |
+| `images/bar/bar-fondo.webp` | Generado por Flavio (`recursos-fv/Bar Andino Bajo las Estrellas.png`), escalado a 2560 px | Propio |
+| `images/andino/andino-fondo.webp` | Generado por Flavio (`recursos-fv/Valle andino al atardecer.png`), escalado a 2560 px | Propio |
 | `images/cantina/cantina-personaje-1..4.webp` y `cantina-avatar-1..4.webp` | Generados con ChatGPT por Flavio (`recursos-fv/graficos/personajes/Personajes_Caricaturescos_en_Cuadrícula.png`), recortados | Propio |
 | `images/cantina/cantina-personaje-1..4-descubierto.webp` | Hoja de caras de vergüenza (`recursos-fv/graficos/personajes/Cuatro retratos cómicos de vergüenza.png`), recortada y alineada con la neutral | Propio |
 | `images/cantina/cantina-personaje-1..4-descubre.webp` | Hoja de caras triunfales (`recursos-fv/graficos/personajes/Personajes_Cuando lo pillan mintiendo.png`), recortada y alineada con la neutral | Propio |

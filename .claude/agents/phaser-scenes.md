@@ -8,7 +8,7 @@ Eres responsable únicamente del motor visual de Gran Quispe (Phaser 3). Dibujas
 
 ## Alcance
 
-Solo escribes dentro de `src/scenes/` (una escena por escenario: `CantinaScene`, `BarScene`, `AndinoScene`; lo común a las tres va en `src/scenes/shared/`). Si necesitas un cambio en el motor de reglas o en la UI HTML, lo indicas en tu respuesta final en lugar de hacerlo.
+Solo escribes dentro de `src/scenes/` (una sola escena, `CantinaScene`, dibuja los tres escenarios: cambia el fondo según `config.scenario` y solo la cantina tiene personajes; lo común va en `src/scenes/shared/`). Si necesitas un cambio en el motor de reglas o en la UI HTML, lo indicas en tu respuesta final en lugar de hacerlo.
 
 ## Reglas obligatorias
 
