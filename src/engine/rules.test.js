@@ -9,6 +9,9 @@ import {
   canSeeDice,
   createGame,
   getLastCall,
+  canSpy,
+  getSpiedDie,
+  isFinalDuel,
 } from './rules.js';
 
 // rng que devuelve los valores en orden; para un dado d se usa (d - 1) / 6
@@ -322,7 +325,7 @@ describe('siguiente ronda', () => {
     let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 42);
     s = act(act(s, 'DOUBT', 'beto'), 'NEXT_ROUND');
     expect(s).toMatchObject({ phase: PHASES.ROLL, currentPlayerId: 'ana' });
-    expect(s.round).toEqual({ number: 2, openerId: 'ana', dice: null, calls: [], result: null });
+    expect(s.round).toEqual({ number: 2, openerId: 'ana', dice: null, calls: [], result: null, spiedBy: null });
   });
 
   it('si el perdedor quedó eliminado, abre el siguiente activo', () => {
@@ -509,5 +512,88 @@ describe('variantes', () => {
   it('Reloj de presión desactivado: TIMEOUT se rechaza', () => {
     const s = act(rollAs(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 42);
     expect(() => act(s, 'TIMEOUT', 'beto')).toThrow(expect.objectContaining({ code: 'VARIANT_DISABLED' }));
+  });
+});
+
+describe('Comodín de espía', () => {
+  const variants = { spyWildcard: { enabled: true } };
+  const decide = (dice) => act(rollAs(newGame({ variants }), 'ana', dice), 'CALL', 'ana', 42);
+
+  it('quien decide ve uno de los dos dados, una vez por partida', () => {
+    let s = act(decide([6, 3]), 'SPY', 'beto');
+    expect(getSpiedDie(s, 'beto')).toBe(6);
+    expect(getSpiedDie(s, 'ana')).toBeNull();
+    expect(s.players.find((p) => p.id === 'beto').spyUsed).toBe(true);
+    expect(() => act(s, 'SPY', 'beto')).toThrow(expect.objectContaining({ code: 'SPY_USED' }));
+    s = act(s, 'DOUBT', 'beto');
+    expect(getSpiedDie(s, 'beto')).toBeNull();
+  });
+
+  it('lo espiado no vale para los dados de otra tirada', () => {
+    const players = PLAYERS.slice(0, 2);
+    let s = act(rollAs(newGame({ variants, players }), 'ana', [6, 3]), 'CALL', 'ana', 42);
+    s = act(s, 'SPY', 'beto');
+    s = act(believeAndRoll(s, 'beto', [5, 1]), 'CALL', 'beto', 51);
+    s = act(believeAndRoll(s, 'ana', [4, 4]), 'CALL', 'ana', 140);
+    expect(getSpiedDie(s, 'beto')).toBeNull(); // le vuelve a tocar decidir, con dados nuevos
+  });
+
+  it('espiar no cambia de fase ni de turno (no vuelve la pantalla de pase ni se reinicia el reloj)', () => {
+    const before = decide([6, 3]);
+    expect(canSpy(before, 'beto')).toBe(true);
+    expect(canSpy(before, 'cata')).toBe(false);
+    const after = act(before, 'SPY', 'beto');
+    expect(after).toMatchObject({ phase: before.phase, currentPlayerId: before.currentPlayerId });
+    expect(canSpy(after, 'beto')).toBe(false);
+    expect(() => act(before, 'SPY', 'cata')).toThrow(expect.objectContaining({ code: 'NOT_YOUR_TURN' }));
+  });
+
+  it('una partida guardada sin la variante no se rompe: no hay espía ni duelo', () => {
+    let s = decide([6, 3]);
+    const { spyWildcard, finalDuel, ...oldVariants } = s.config.variants;
+    s = { ...s, config: { ...s.config, variants: oldVariants }, players: s.players.map(({ spyUsed, ...p }) => p) };
+    expect(canSpy(s, 'beto')).toBe(false);
+    expect(isFinalDuel(s)).toBe(false);
+    expect(() => act(s, 'SPY', 'beto')).toThrow(expect.objectContaining({ code: 'VARIANT_DISABLED' }));
+  });
+
+  it('solo al decidir, y solo con la variante activa', () => {
+    expect(() => act(rollAs(newGame({ variants }), 'ana', [6, 3]), 'SPY', 'ana')).toThrow(expect.objectContaining({ code: 'WRONG_PHASE' }));
+    const off = act(rollAs(newGame(), 'ana', [6, 3]), 'CALL', 'ana', 42);
+    expect(() => act(off, 'SPY', 'beto')).toThrow(expect.objectContaining({ code: 'VARIANT_DISABLED' }));
+  });
+});
+
+describe('Duelo final', () => {
+  const variants = { finalDuel: { enabled: true } };
+  const loseRound = (s, playerId) => act(act(rollAs(s, playerId, [3, 1]), 'CALL', playerId, 65), 'DOUBT', s.players.find((p) => p.id !== playerId && !p.eliminated).id);
+
+  it('con dos jugadores en pie, la ronda perdida elimina', () => {
+    const s = newGame({ variants, players: PLAYERS.slice(0, 2) });
+    expect(isFinalDuel(s)).toBe(true);
+    const over = loseRound(s, 'ana');
+    expect(over.players[0]).toMatchObject({ letters: 1, eliminated: true });
+    expect(over).toMatchObject({ phase: PHASES.GAME_OVER, winnerId: 'beto' });
+  });
+
+  it('con tres jugadores no hay duelo, y empieza cuando queda uno menos', () => {
+    let s = newGame({ variants });
+    expect(isFinalDuel(s)).toBe(false);
+    s = { ...s, players: s.players.map((p) => (p.id === 'cata' ? { ...p, letters: 5 } : p)) };
+    s = act(loseRound({ ...s, currentPlayerId: 'cata', round: { ...s.round, openerId: 'cata' } }, 'cata'), 'NEXT_ROUND');
+    expect(isFinalDuel(s)).toBe(true);
+    s = loseRound(s, s.currentPlayerId);
+    expect(s.phase).toBe(PHASES.GAME_OVER);
+  });
+
+  it('en modo Por vidas también elimina, aunque le sobren vidas, y el resultado lo dice', () => {
+    const s = loseRound(newGame({ mode: 'lives', lives: 5, variants, players: PLAYERS.slice(0, 2) }), 'ana');
+    expect(s.players[0]).toMatchObject({ lives: 4, eliminated: true });
+    expect(s.round.result.duel).toBe(true);
+  });
+
+  it('desactivado, perder una ronda con dos jugadores solo suma una letra', () => {
+    const s = loseRound(newGame({ players: PLAYERS.slice(0, 2) }), 'ana');
+    expect(s.players[0]).toMatchObject({ letters: 1, eliminated: false });
   });
 });

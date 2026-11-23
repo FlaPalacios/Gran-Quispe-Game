@@ -7,6 +7,8 @@ describe('resolveVariants', () => {
       quispeBonus: { enabled: true },
       revealOnCholada: { enabled: false },
       pressureClock: { enabled: false, seconds: 15 },
+      spyWildcard: { enabled: false },
+      finalDuel: { enabled: false },
     });
   });
 

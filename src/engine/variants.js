@@ -1,6 +1,5 @@
 // Registro de variantes del panel de reglas.
 // El panel de configuración se genera leyendo VARIANTS; agregar una variante no toca la vista.
-// Pendientes (Fase 3): comodín de espía y duelo final.
 import { QUISPE } from './dice.js';
 import { RESULTS } from './constants.js';
 
@@ -8,6 +7,8 @@ export const VARIANTS = Object.freeze([
   { id: 'quispeBonus', defaultEnabled: true },
   { id: 'revealOnCholada', defaultEnabled: false },
   { id: 'pressureClock', defaultEnabled: false, params: { seconds: { default: 15, min: 5, max: 60 } } },
+  { id: 'spyWildcard', defaultEnabled: false }, // la regla vive en rules.js (acción SPY)
+  { id: 'finalDuel', defaultEnabled: false }, // la regla vive en rules.js (isFinalDuel)
 ]);
 
 // Completa con valores por defecto y valida lo que llega de la configuración

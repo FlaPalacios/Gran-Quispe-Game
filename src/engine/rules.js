@@ -55,6 +55,7 @@ export function createGame({ config, players }, { rng } = {}) {
       isBot: p.isBot ?? false,
       personality: p.personality ?? null,
       eliminated: false,
+      spyUsed: false,
       ...mode.initPlayer(fullConfig),
     })),
     phase: PHASES.ROLL,
@@ -76,6 +77,8 @@ export function applyAction(state, action, ctx = {}) {
       return doubt(state, action);
     case 'TIMEOUT':
       return timeout(state, action);
+    case 'SPY':
+      return spy(state, action);
     case 'NEXT_ROUND':
       return nextRound(state);
     default:
@@ -97,6 +100,23 @@ export function getActivePlayers(state) {
 // Solo quien acaba de tirar ve los dados, y únicamente antes de cantar.
 // Al terminar la ronda se destapan para todos si alguien desconfió,
 // o en una Cholada si la variante "Destapar en Cholada" está activa.
+// Comodín de espía: el dado que espió quien decide, o null. Solo él lo ve, y solo mientras decide.
+export function getSpiedDie(state, playerId) {
+  const spied = state.phase === PHASES.DECIDE && playerId === state.currentPlayerId && state.round.spiedBy === playerId;
+  return spied ? state.round.dice[0] : null;
+}
+
+// Si quien decide puede usar ahora su comodín de espía (lo que la UI ofrece como botón)
+export function canSpy(state, playerId) {
+  if (state.phase !== PHASES.DECIDE || playerId !== state.currentPlayerId) return false;
+  return Boolean(state.config.variants.spyWildcard?.enabled) && !state.players.find((p) => p.id === playerId).spyUsed;
+}
+
+// Duelo final: con dos jugadores en pie, la próxima ronda perdida elimina
+export function isFinalDuel(state) {
+  return Boolean(state.config.variants.finalDuel?.enabled) && getActivePlayers(state).length === 2;
+}
+
 export function canSeeDice(state, playerId) {
   if (state.phase === PHASES.ROUND_OVER || state.phase === PHASES.GAME_OVER) return state.round.result.revealed;
   return state.phase === PHASES.CALL && playerId === state.currentPlayerId;
@@ -108,7 +128,8 @@ function roll(state, action, { rng } = {}) {
   assertPhase(state, PHASES.ROLL);
   assertTurn(state, action.playerId);
   if (typeof rng !== 'function') throw new TypeError('ROLL necesita ctx.rng');
-  return { ...state, phase: PHASES.CALL, round: { ...state.round, dice: rollDice(rng) } };
+  // Dados nuevos: lo que alguien espió de la tirada anterior ya no vale
+  return { ...state, phase: PHASES.CALL, round: { ...state.round, dice: rollDice(rng), spiedBy: null } };
 }
 
 function call(state, action) {
@@ -188,6 +209,24 @@ function timeout(state, action) {
   return endRound(state, { type: RESULTS.CHOLADA, reason: CHOLADA_REASONS.TIMEOUT, loserId: action.playerId });
 }
 
+// Comodín de espía: una vez por partida, antes de decidir, se mira uno de los dos dados.
+// Se muestra el primero: el orden de los dos ya es azar de la tirada.
+function spy(state, action) {
+  assertPhase(state, PHASES.DECIDE);
+  assertTurn(state, action.playerId);
+  if (!state.config.variants.spyWildcard?.enabled) {
+    throw new GameRuleError('VARIANT_DISABLED', 'El comodín de espía no está activo');
+  }
+  if (state.players.find((p) => p.id === action.playerId).spyUsed) {
+    throw new GameRuleError('SPY_USED', `${action.playerId} ya usó su comodín de espía`);
+  }
+  return {
+    ...state,
+    players: state.players.map((p) => (p.id === action.playerId ? { ...p, spyUsed: true } : p)),
+    round: { ...state.round, spiedBy: action.playerId },
+  };
+}
+
 function nextRound(state) {
   assertPhase(state, PHASES.ROUND_OVER);
   const { loserId } = state.round.result;
@@ -205,17 +244,18 @@ function nextRound(state) {
 // --- Internas ---
 
 function newRound(number, openerId) {
-  return { number, openerId, dice: null, calls: [], result: null };
+  return { number, openerId, dice: null, calls: [], result: null, spiedBy: null };
 }
 
 function endRound(state, result) {
   const mode = getMode(state.config.mode);
   const { variants } = state.config;
   const cost = lossCost(variants, result);
+  const duel = isFinalDuel(state);
   const players = state.players.map((p) => {
     if (p.id !== result.loserId) return p;
     const updated = mode.applyLoss(p, cost);
-    return { ...updated, eliminated: mode.isOut(updated) };
+    return { ...updated, eliminated: duel || mode.isOut(updated) };
   });
 
   const revealed = revealsDice(variants, result);
@@ -223,6 +263,7 @@ function endRound(state, result) {
     ...result,
     cost,
     revealed,
+    duel,
     // Sin destape, los dados no se publican en el resultado (siguen en round.dice)
     dice: revealed ? state.round.dice : null,
     actual: revealed ? readDice(state.round.dice) : null,

@@ -4,7 +4,7 @@ import { avatarFor } from '../app/characters.js';
 import { viewerCanSeeDice } from '../app/gameStore.js';
 import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
-import { CHOLADA_REASONS, PHASES, RESULTS, getLastCall } from '../engine/rules.js';
+import { CHOLADA_REASONS, PHASES, RESULTS, canSpy, getLastCall, getSpiedDie, isFinalDuel } from '../engine/rules.js';
 import { hasText, t } from '../i18n/index.js';
 import { PressureClock } from './PressureClock.js';
 import { RollButton } from './RollButton.js';
@@ -29,6 +29,8 @@ export function GameHud({
 }) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
+  // Mientras se destapa, todo lo que se dibuja de los jugadores es como estaban antes de la ronda
+  const playersBefore = snapshot.playersBefore ?? game.players;
   // Tres zonas independientes: cada una se coloca con las medidas de src/app/stage.js
   return h(
     'div',
@@ -36,7 +38,8 @@ export function GameHud({
     h(
       'div',
       { class: 'zona hud__top' },
-      h('span', { class: 'pill' }, t('game.round', { n: game.round.number, mode: modeName(game.config.mode) })),
+      // En el duelo final, el aviso ocupa el sitio del modo: en celular no caben los dos
+      h('span', { class: 'pill' }, t('game.round', { n: game.round.number, mode: isFinalDuel({ ...game, players: playersBefore }) ? t('game.finalDuel') : modeName(game.config.mode) })),
       h(
         'span',
         { class: 'hud__top-actions' },
@@ -48,7 +51,7 @@ export function GameHud({
       'div',
       { class: 'zona hud__players' },
       // Mientras se destapa se dibujan los jugadores como estaban antes de la ronda
-      playerList(game, snapshot.playersBefore ?? game.players, { foldPlayers, playersOpen, onTogglePlayers }),
+      playerList(game, playersBefore, { foldPlayers, playersOpen, onTogglePlayers }),
     ),
     h(
       'section',
@@ -88,6 +91,7 @@ function turnCard(snapshot, current, store, withClock) {
           ' ',
           h('span', { class: 'call-chip' }, formatCall(last.value)),
         ),
+        spyLine(game, current, store),
         withClock && PressureClock(snapshot, store),
       );
     case PHASES.ROUND_OVER:
@@ -130,7 +134,7 @@ function resultCard(game) {
     lines.unshift(t('result.cholada.called', { call: result.call }));
   }
   lines.push(t('result.loses', { name: loser.name, cost: result.cost, unit: lossUnit(game.config.mode, result.cost) }));
-  if (loser.eliminated) lines.push(t('result.eliminated', { name: loser.name }));
+  if (loser.eliminated) lines.push(t(result.duel ? 'result.eliminatedDuel' : 'result.eliminated', { name: loser.name }));
 
   return h(
     'div',
@@ -248,6 +252,14 @@ export function CallSheet({ snapshot, store, onPick, onCancel }) {
       h('button', { class: 'btn btn--light', onClick: onCancel }, t('game.cancel')),
     ),
   );
+}
+
+// Comodín de espía: el botón mientras le quede, y lo que vio una vez usado
+function spyLine(game, player, store) {
+  const die = getSpiedDie(game, player.id);
+  if (die != null) return h('p', { class: 'turn-card__text' }, t('game.spied', { n: die }));
+  if (!canSpy(game, player.id)) return null;
+  return h('button', { class: 'btn btn--light btn--small', onClick: () => store.dispatch({ type: 'SPY', playerId: player.id }) }, t('game.spy'));
 }
 
 function diceText(dice) {

@@ -62,10 +62,10 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 **API del motor (`src/engine/rules.js`):**
 
 - `createGame({ config, players }, { rng })` crea el estado inicial. `config`: `mode` (`classic` | `lives` | `penalty`), `lives`, `penaltyText`, `variants` (se completa con `resolveVariants` de `variants.js`).
-- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`, y `asNumber: true` si el jugador escribió el número en el teclado: es el único campo de una acción que cambia una regla, así que en el modo online de la Fase 5 el servidor tendrá que decidir si se fía de él o guarda el modo de entrada en la configuración de la partida), `BELIEVE`, `DOUBT`, `TIMEOUT` (todas con `playerId`; `TIMEOUT` vale en las fases `CALL` y `DECIDE`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`).
+- `applyAction(state, action, { rng })` devuelve el nuevo estado. Acciones: `ROLL`, `CALL` (con `value`, y `asNumber: true` si el jugador escribió el número en el teclado: es el único campo de una acción que cambia una regla, así que en el modo online de la Fase 5 el servidor tendrá que decidir si se fía de él o guarda el modo de entrada en la configuración de la partida), `BELIEVE`, `DOUBT`, `TIMEOUT`, `SPY` (todas con `playerId`; `TIMEOUT` vale en las fases `CALL` y `DECIDE`, `SPY` solo en `DECIDE`) y `NEXT_ROUND`. Una acción inválida lanza `GameRuleError` con `code` (`NOT_YOUR_TURN`, `WRONG_PHASE`, `INVALID_CALL`, `UNKNOWN_ACTION`, `VARIANT_DISABLED`, `SPY_USED`).
 - Fases: `ROLL` → `CALL` → `DECIDE` → (`ROLL` y luego `CALL` si cree) → `ROUND_OVER` → `NEXT_ROUND` → `ROLL`. Termina en `GAME_OVER` con `winnerId`.
 - Resultados de ronda (`state.round.result`): `type` es `DOUBT`, `CHOLADA` o `BELIEVED_QUISPE`. Una Cholada trae `reason`: `LOWER_CALL`, `INVALID_NUMBER` o `TIMEOUT`. Todos traen `loserId`, `cost`, `revealed`, `dice`, `actual` y `penaltyText`. Si `revealed` es falso, `dice` y `actual` vienen en `null`.
-- Consultas: `getLastCall`, `getActivePlayers`, `canSeeDice(state, playerId)`. La UI muestra los dados solo si `canSeeDice` lo permite.
+- Consultas: `getLastCall`, `getActivePlayers`, `canSeeDice(state, playerId)`, `canSpy(state, playerId)`, `getSpiedDie(state, playerId)` (el dado del comodín de espía, o `null`) e `isFinalDuel(state)`. Si la ronda se perdió en duelo, el resultado trae `duel: true`. La UI muestra los dados solo si `canSeeDice` lo permite.
 
 **Capa de aplicación (`src/app/gameStore.js`):** une el motor con la vista. Guarda el estado, aplica acciones con `Math.random`, guarda en localStorage y avisa a los suscritos (UI y escena). También lleva estado propio de la interfaz: `viewerId` (quién confirmó el pase), `turnStartedAt` (desde cuándo corre el reloj de presión) y `revealing` (el cubilete todavía se está levantando).
 
@@ -188,8 +188,8 @@ Se juega con un cubilete y dos dados.
 - Quispe vale más (activa por defecto; antes "vale doble" en el plan): cuando alguien canta Quispe y el siguiente desconfía, si de verdad era Quispe pierde **2** quien desconfió; si era mentira pierde **3** quien cantó. Creer un Quispe sigue costando 1.
 - Destapar en Cholada (desactivada por defecto): en una Cholada se muestran los dados a todos.
 - Reloj de presión (desactivado por defecto): tiempo límite para cantar y para decidir si se cree o se desconfía (15 segundos por defecto, de 5 a 60). Si se acaba, es Cholada. El plazo para decidir empieza cuando el jugador confirma la pantalla de pase; el de cantar, cuando los dados ya cayeron. Mientras se sacude el cubilete no corre.
-- Comodín de espía: una vez por partida, cada jugador puede ver uno de los dos dados del cubilete que recibe antes de decidir.
-- Duelo final (opcional, desactivado por defecto): con dos jugadores restantes, la partida pasa a muerte súbita y la siguiente ronda perdida elimina, sin importar letras o vidas restantes.
+- Comodín de espía (desactivado por defecto): una vez por partida, cada jugador puede ver uno de los dos dados del cubilete que recibe antes de decidir. Se muestra el primero de la tirada (el orden ya es azar) y deja de valer en cuanto alguien vuelve a tirar.
+- Duelo final (opcional, desactivado por defecto): con dos jugadores restantes, la partida pasa a muerte súbita y la siguiente ronda perdida elimina, sin importar letras o vidas restantes. La barra superior lo avisa en lugar del nombre del modo.
 - Bots: personalidades que mienten y desconfían con distinto criterio, sumables a cualquier partida.
 
 ## Entidades de datos
@@ -273,7 +273,7 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 
 - [ ] Bar universitario y paisaje andino (sin personajes), con selector de escenario
 - [x] Registro de variantes y panel de configuración generado desde él (celular y PC)
-- [ ] Variantes que faltan, con tests: Comodín de espía y Duelo final
+- [x] Variantes que faltan, con tests: Comodín de espía y Duelo final
 
 ### Fase 4: Bots
 
