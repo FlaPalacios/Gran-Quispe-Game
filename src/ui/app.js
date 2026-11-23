@@ -11,10 +11,13 @@ import { MainMenu } from './MainMenu.js';
 import { PassDeviceScreen } from './PassDeviceScreen.js';
 import { RulesPanel, defaultDraft } from './RulesPanel.js';
 
-export function mountApp(root, store) {
+export function mountApp(root, store, stage) {
   let screen = 'menu';
   let draft = defaultDraft();
   let callSheetOpen = false;
+  let foldPlayers = Boolean(stage?.get()?.players.folded);
+  // La lista plegada vive aquí y no en el HUD: si no, cada aviso del store la cerraría
+  let playersOpen = false;
 
   store.subscribe(() => {
     callSheetOpen = false;
@@ -24,6 +27,16 @@ export function mountApp(root, store) {
   // Entrada al empezar una partida: la pantalla se abre como un túnel mientras suena la
   // cerveza. Va fuera de root porque redibujar lo borraría a media animación.
   store.onSignal((name) => name === 'gameStart' && document.body.append(PlayIntro()));
+
+  // Que las tarjetas se plieguen o no cambia el HTML, no solo su tamaño. Se redibuja solo
+  // cuando eso cambia: en cada resize sería tirar el número a medio escribir en el teclado.
+  stage?.subscribe((layout) => {
+    if (!layout || layout.players.folded === foldPlayers) return;
+    foldPlayers = layout.players.folded;
+    // Con el teclado abierto no se redibuja: se perdería el número a medio escribir. En el
+    // celular basta con que se esconda la barra de direcciones para cruzar el umbral.
+    if (!callSheetOpen) render();
+  });
 
   // Un solo punto para el clic de todos los botones, en vez de repetirlo en cada componente.
   // El botón Tirar no: ya suena el cubilete al sacudir
@@ -70,6 +83,9 @@ export function mountApp(root, store) {
       snapshot,
       store,
       callSheetOpen,
+      foldPlayers,
+      playersOpen,
+      onTogglePlayers: (open) => (playersOpen = open),
       onExit: () => go('menu', () => store.leave()),
       onOpenCalls: () => {
         callSheetOpen = true;

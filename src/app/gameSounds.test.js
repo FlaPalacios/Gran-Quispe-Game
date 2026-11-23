@@ -121,6 +121,39 @@ describe('connectGameSounds', () => {
     }
   });
 
+  it('creer un Quispe no suena a Cholada: solo la risa', () => {
+    vi.useFakeTimers();
+    try {
+      const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 21);
+      store.emit({ game: called });
+      playSfx.mockClear();
+      store.emit({ game: act(called, 'BELIEVE', 'beto') });
+      expect(sounds()).toEqual([]);
+      vi.advanceTimersByTime(500);
+      expect(sounds()).toHaveLength(1);
+      expect(LAUGHS).toContain(sounds()[0]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('las risas se van turnando: dos derrotas seguidas no repiten', () => {
+    const perder = (dice, call) => {
+      const called = act(roll(newGame(), 'ana', dice), 'CALL', 'ana', call);
+      const over = act(called, 'DOUBT', 'beto');
+      store.emit({ game: called });
+      store.emit({ game: over, revealing: true });
+      store.emit({ game: over, revealing: false });
+    };
+    playSfx.mockClear();
+    perder([3, 1], 65); // pillan a ana mintiendo
+    perder([6, 5], 65); // ana cantó lo que tenía: pierde beto
+    // Entre medias suena el destape: aquí solo interesan las risas
+    const risas = sounds().filter((key) => LAUGHS.includes(key));
+    expect(risas).toHaveLength(2);
+    expect(risas[1]).not.toBe(risas[0]);
+  });
+
   it('al ganar la partida suenan el remate y el brindis a la vez', () => {
     const start = createGame(
       { config: { mode: 'lives', lives: 1 }, players: PLAYERS.slice(0, 2) },

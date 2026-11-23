@@ -28,7 +28,6 @@ Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 | `sfx-cholada` | Sintetizado por Claude (trombón triste de 4 notas) | Propio |
 | `sfx-boton` | Kenney, "Impact Sounds": `impactWood_light_001` | CC0 |
 | `sfx-creo` | BigSoundBank 1323 (choque de vasos) | CC0 |
-| `sfx-pierde-ronda` | Kenney, "Music Jingles": `PIZZI01` | CC0 |
 | `sfx-empezar` | Grabado por Flavio: "sonido cerveza empezar juego" | Propio |
 | `sfx-destapar` | Grabado por Flavio: "Sonido revelar dadoss" | Propio |
 | `sfx-cholada` | Grabado por Flavio: "Risa Cholada" | Propio |
@@ -45,5 +44,5 @@ calidad) y su MP3 se sacó de ahí. Los de Flavio salen de `recursos-fv/Sonidos 
 Cuál suena más fuerte que cuál se ajusta en la tabla `SFX` de `src/app/audio.js`, no en el archivo.
 
 Los que fueron reemplazados quedan en `recursos-fv/sonidos-alternativos/` (destapar, cholada,
-descubierto, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
+descubierto, pierde-ronda, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
 llegaron a entrar, en `recursos-fv/sonidos-candidatos/`.

@@ -14,7 +14,7 @@ const store = createGameStore({ revealMs: () => sfxDuration('reveal') });
 // Calcula las zonas de la pantalla y las publica como variables CSS para el HUD
 const stage = createStage(store);
 connectGameSounds(store);
-mountApp(document.getElementById('ui'), store);
+mountApp(document.getElementById('ui'), store, stage);
 
 // Los navegadores solo permiten sonido tras un gesto del usuario: se precarga en el primer toque
 addEventListener('pointerdown', preloadSfx, { once: true });

@@ -11,11 +11,11 @@ export const PHASES = Object.freeze({
 export const RESULTS = Object.freeze({
   DOUBT: 'DOUBT', // alguien desconfió y se destapó el cubilete
   CHOLADA: 'CHOLADA', // perdió por equivocarse (ver CHOLADA_REASONS); se destapa solo con la variante revealOnCholada
+  BELIEVED_QUISPE: 'BELIEVED_QUISPE', // creyó un Quispe: no se equivocó en nada, simplemente pierde
 });
 
 export const CHOLADA_REASONS = Object.freeze({
   LOWER_CALL: 'LOWER_CALL', // cantó igual o más bajo que la jugada anterior
-  BELIEVED_QUISPE: 'BELIEVED_QUISPE', // creyó un Quispe: no hay nada más alto que cantar
   TIMEOUT: 'TIMEOUT', // se acabó el reloj de presión sin decidir
   INVALID_NUMBER: 'INVALID_NUMBER', // cantó un número que no es una jugada de la escala
 });

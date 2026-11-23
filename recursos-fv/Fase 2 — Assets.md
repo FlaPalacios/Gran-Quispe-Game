@@ -190,7 +190,6 @@ Carpeta `src/assets/audio/`, formato OGG (si solo consigues MP3 o WAV, Claude lo
 - [x] `sfx-boton.ogg` · clic suave de madera
 - [x] `sfx-creo.ogg` · choque de vasos al creer (menos de 0,5 s)
 - [x] `sfx-descubierto.ogg` · golpe dramático al pillar a un mentiroso
-- [x] `sfx-pierde-ronda.ogg` · remate que baja al perder la ronda
 - [x] `sfx-eliminado.ogg` · remate largo al quedar eliminado
 - [x] `sfx-gana-partida.ogg` · remate que sube al ganar la partida
 - [ ] `musica-cantina.ogg` · bucle instrumental andino tranquilo (opcional)

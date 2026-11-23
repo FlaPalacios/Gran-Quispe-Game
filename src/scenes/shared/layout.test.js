@@ -155,6 +155,29 @@ describe('getLayout', () => {
     });
   });
 
+  describe('las tarjetas plegadas', () => {
+    it('en una pantalla baja se pliegan en una barra y la zona de juego crece', () => {
+      const bajo = getLayout(360, 640, { playerCount: 4 });
+      const alto = getLayout(390, 844, { playerCount: 4 });
+      expect(bajo.players.folded).toBe(true);
+      expect(bajo.players.height).toBeLessThan(50); // una barra, no una cuadrícula
+      expect(alto.players.folded).toBe(false);
+      // La zona de juego se queda con el sitio que dejan, pese a ser una pantalla más baja
+      expect(bajo.play.height / 640).toBeGreaterThan(alto.play.height / 844);
+    });
+
+    it('desplegada, la lista cabe sobre la escena sin taparla entera', () => {
+      const { players, scene } = getLayout(360, 640, { playerCount: 8 });
+      expect(players.openHeight).toBeGreaterThan(players.height);
+      expect(players.openHeight).toBeLessThan(scene.height);
+    });
+
+    it('en dos columnas no se pliegan: ya tienen su propio sitio', () => {
+      expect(getLayout(1366, 768, { playerCount: 8 }).players.folded).toBe(false);
+      expect(getLayout(844, 390, { playerCount: 8 }).players.folded).toBe(false);
+    });
+  });
+
   describe('el breakpoint', () => {
     it('una ventana cuadrada de 1024 ya cuenta como PC', () => {
       expect(getLayout(DESKTOP_MIN_WIDTH, DESKTOP_MIN_WIDTH).isDesktop).toBe(true);

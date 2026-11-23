@@ -14,7 +14,19 @@ import { formatCall, lossUnit, modeName, playerName } from './format.js';
 
 // callSheetOpen: con el teclado (o la hoja) abierto, el reloj se dibuja dentro de él,
 // que tapa el panel de turno. Solo puede haber uno a la vez, porque el intervalo es único.
-export function GameHud({ snapshot, store, callSheetOpen, onExit, onOpenCalls, onPlayAgain, onMenu, onRefresh }) {
+export function GameHud({
+  snapshot,
+  store,
+  callSheetOpen,
+  foldPlayers,
+  playersOpen,
+  onTogglePlayers,
+  onExit,
+  onOpenCalls,
+  onPlayAgain,
+  onMenu,
+  onRefresh,
+}) {
   const { game } = snapshot;
   const current = game.players.find((p) => p.id === game.currentPlayerId);
   // Tres zonas independientes: cada una se coloca con las medidas de src/app/stage.js
@@ -36,7 +48,7 @@ export function GameHud({ snapshot, store, callSheetOpen, onExit, onOpenCalls, o
       'div',
       { class: 'zona hud__players' },
       // Mientras se destapa se dibujan los jugadores como estaban antes de la ronda
-      h('div', { class: 'players' }, (snapshot.playersBefore ?? game.players).map((p, i) => playerCard(game, p, i))),
+      playerList(game, snapshot.playersBefore ?? game.players, { foldPlayers, playersOpen, onTogglePlayers }),
     ),
     h(
       'section',
@@ -87,6 +99,14 @@ function turnCard(snapshot, current, store, withClock) {
   }
 }
 
+// Cada forma de perder la ronda tiene su propio título. Creer un Quispe no es equivocarse,
+// así que no lleva el cartel de Cholada ni su sonido: simplemente se pierde.
+const RESULT_TITLES = {
+  [RESULTS.DOUBT]: 'result.doubt.title',
+  [RESULTS.CHOLADA]: 'result.cholada.title',
+  [RESULTS.BELIEVED_QUISPE]: 'result.believedQuispe.title',
+};
+
 function resultCard(game) {
   const { result } = game.round;
   const loser = game.players.find((p) => p.id === result.loserId);
@@ -115,7 +135,7 @@ function resultCard(game) {
   return h(
     'div',
     { class: `turn-card result${isCholada ? ' result--cholada' : ''}`, role: 'status' },
-    h('h2', { class: 'result__title' }, t(isCholada ? 'result.cholada.title' : 'result.doubt.title')),
+    h('h2', { class: 'result__title' }, t(RESULT_TITLES[result.type])),
     isCholada && hasText(`result.cholada.${result.reason}`) && h('p', { class: 'result__subtitle' }, t(`result.cholada.${result.reason}`)),
     lines.map((line) => h('p', { class: 'turn-card__text' }, line)),
     result.penaltyText && h('p', { class: 'result__penalty' }, t('result.penalty', { text: result.penaltyText })),
@@ -165,6 +185,19 @@ function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu })
     default:
       return null;
   }
+}
+
+// En pantallas bajas las tarjetas se pliegan en una barra: la mesa y el panel de cantar
+// pesan más que ver las letras de todos a la vez.
+function playerList(game, players, { foldPlayers, playersOpen, onTogglePlayers }) {
+  const cards = h('div', { class: 'players' }, players.map((p, i) => playerCard(game, p, i)));
+  if (!foldPlayers) return cards;
+  return h(
+    'details',
+    { class: 'players-fold', open: playersOpen, onToggle: (e) => onTogglePlayers(e.target.open) },
+    h('summary', { class: 'players-fold__summary' }, t('game.players', { n: players.length })),
+    cards,
+  );
 }
 
 function playerCard(game, player, index) {

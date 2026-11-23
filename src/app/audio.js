@@ -19,7 +19,6 @@ export const SFX = Object.freeze({
   click: { file: 'sfx-boton', volume: 0.35 },
   start: { file: 'sfx-empezar', volume: 1 },
   believe: { file: 'sfx-creo', volume: 0.5 },
-  loss: { file: 'sfx-pierde-ronda', volume: 0.8 },
   eliminated: { file: 'sfx-eliminado', volume: 0.7 },
   win: { file: 'sfx-gana-partida', volume: 0.8 },
   // El brindis acompaña al remate de ganar: va por debajo

@@ -3,7 +3,7 @@
 //  - avisa a quien se suscriba (la escena de Phaser).
 // Así la geometría vive en un solo sitio (scenes/shared/layout.js) y no hay dos copias
 // de las medidas que mantener sincronizadas.
-import { getLayout } from '../scenes/shared/layout.js';
+import { ROOMY_CARD_HEIGHT, ROOMY_PLAY_HEIGHT, getLayout } from '../scenes/shared/layout.js';
 import { getSafeAreaInsets } from './safeArea.js';
 
 const ZONES = ['frame', 'topBar', 'scene', 'players', 'play'];
@@ -37,11 +37,12 @@ export function createStage(store, { root = document.documentElement } = {}) {
     root.style.setProperty('--zona-players-columnas', String(next.players.columns));
     root.style.setProperty('--zona-players-gap', `${next.players.gap}px`);
     root.style.setProperty('--zona-players-fila', `${next.players.rowHeight}px`);
+    root.style.setProperty('--zona-players-abierto', `${next.players.openHeight}px`);
     root.dataset.modo = next.isDesktop ? 'pc' : 'celular';
     // La versión grande de la tarjeta solo cabe si la fila reservada da de sí
-    root.dataset.tarjetas = next.players.rowHeight >= 92 ? 'amplia' : 'compacta';
+    root.dataset.tarjetas = next.players.rowHeight >= ROOMY_CARD_HEIGHT ? 'amplia' : 'compacta';
     // Y si el panel de turno cabe con el texto grande
-    root.dataset.juego = next.play.height >= 220 ? 'amplia' : 'compacta';
+    root.dataset.juego = next.play.height >= ROOMY_PLAY_HEIGHT ? 'amplia' : 'compacta';
   }
 
   function refresh() {

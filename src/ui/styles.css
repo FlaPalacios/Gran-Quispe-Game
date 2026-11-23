@@ -96,7 +96,7 @@ p {
   box-shadow: var(--sombra-solida);
   font-family: var(--font-ui);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: transform 80ms, box-shadow 80ms;
 }
@@ -196,7 +196,7 @@ p {
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: 999px;
   padding: 0.35rem 1rem;
-  font-weight: 600;
+  font-weight: 400;
   box-shadow: var(--sombra-solida);
 }
 
@@ -207,7 +207,7 @@ p {
   border: var(--borde-grueso) solid var(--color-borde);
   border-radius: 999px;
   padding: 0.25rem 0.9rem;
-  font-weight: 700;
+  font-weight: 400;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -565,7 +565,7 @@ p {
   border: 2px solid var(--color-borde);
   border-radius: 999px;
   padding: 0.1rem 0.8rem;
-  font-weight: 700;
+  font-weight: 400;
   font-size: 1.1rem;
 }
 
@@ -582,14 +582,14 @@ p {
 }
 
 .result__subtitle {
-  font-weight: 700;
+  font-weight: 400;
   font-size: 1rem;
   margin-top: -0.25rem;
 }
 
 /* 1.2rem en negrita cuenta como texto grande: el rojo sobre crema cumple el contraste */
 .result__penalty {
-  font-weight: 700;
+  font-weight: 400;
   font-size: 1.2rem;
   color: var(--color-retablo-rojo);
 }
@@ -623,7 +623,7 @@ p {
 
 .timer__label {
   min-width: 3.5ch;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .actions {
@@ -692,7 +692,7 @@ p {
   border-radius: 50%;
   background: var(--color-acento);
   object-fit: cover;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .hud__top-actions {
@@ -707,13 +707,13 @@ p {
   white-space: nowrap;
   font-size: 0.78rem;
   line-height: 1.15;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .player__lives,
 .player__out {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .letters {
@@ -730,7 +730,7 @@ p {
   border: 1px solid var(--color-letra-pendiente);
   border-radius: 3px;
   font-size: 0.58rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--color-letra-pendiente);
 }
 
@@ -785,7 +785,7 @@ p {
 .call-option {
   padding: 0;
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .call-option--quispe {
@@ -881,19 +881,11 @@ p {
 
 /* ---------- Teclado para cantar ---------- */
 
-/* Entra entero en la zona de juego de un celular en vertical, sin desplazar: pantallita,
-   tres filas de teclas y el atajo de cantar lo que salió. */
+/* Entra entero en la zona de juego de un celular, sin deslizar: pantallita, dos filas de
+   teclas y, en una sola fila, Quispe, la jugada que salió y Cantar. */
 .keypad {
   gap: 0.5rem;
   padding: 0.75rem 12px 12px;
-}
-
-/* Pantallita: a la izquierda salir, al centro lo que se va escribiendo */
-.keypad__screen {
-  display: grid;
-  grid-template-columns: var(--tactil-min) 1fr;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .keypad__value {
@@ -914,7 +906,6 @@ p {
 
 .keypad__display {
   font-family: var(--font-display);
-  font-weight: 400;
   font-size: 1.6rem;
   line-height: 1.1;
   letter-spacing: 0.1em;
@@ -937,34 +928,48 @@ p {
   min-height: var(--tactil-min);
   padding: 0;
   font-family: var(--font-display);
-  font-weight: 400;
   font-size: 1.35rem;
 }
 
-/* Las dos que cierran la jugada van en su propia fila, lejos de los dígitos: cantar no
-   tiene vuelta atrás y un dedo gordo no debería hacerlo por error. */
-.keypad__quispe,
-.keypad__call {
-  grid-column: span 2;
-  min-height: var(--tactil-min);
-  font-size: 1.1rem;
+/* Las tres que cierran la jugada, juntas y lejos de los dígitos */
+.keypad__actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
 }
 
-/* El Quispe no se escribe, se canta por su nombre. Se enciende y late solo cuando de verdad
-   lo tienes en la mano; elegirlo lo deja marcado hasta confirmar con Cantar. */
+.keypad__quispe,
+.keypad__actual,
+.keypad__call {
+  min-height: var(--tactil-min);
+  padding-inline: 0.25rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.keypad__quispe,
+.keypad__actual {
+  font-family: var(--font-display);
+}
+
+/* El Quispe no se escribe, se canta por su nombre. Se enciende y titila cuando de verdad lo
+   tienes en la mano, y entonces no hay número que ofrecer: se queda con ese sitio. */
 .keypad__quispe {
   color: var(--color-texto);
-  font-family: var(--font-display);
-  font-weight: 400;
   background: var(--color-campo);
+}
+
+.keypad__quispe.is-wide {
+  grid-column: span 2;
 }
 
 .keypad__quispe.is-now {
   color: var(--color-fondo);
   background: var(--color-retablo-dorado);
-  animation: latir-quispe 1.2s ease-in-out infinite;
+  animation: latir-quispe 0.7s ease-in-out infinite;
 }
 
+/* Elegido, queda marcado hasta confirmar con Cantar */
 .keypad__quispe.is-picked {
   outline: var(--borde-grueso) solid var(--color-retablo-dorado);
   outline-offset: 2px;
@@ -972,8 +977,8 @@ p {
 
 @keyframes latir-quispe {
   50% {
-    transform: scale(1.06);
-    box-shadow: var(--sombra-solida), 0 0 18px 5px color-mix(in srgb, var(--color-retablo-dorado) 60%, transparent);
+    transform: scale(1.02);
+    box-shadow: var(--sombra-solida), 0 0 10px 2px color-mix(in srgb, var(--color-retablo-dorado) 45%, transparent);
   }
 }
 
@@ -983,13 +988,7 @@ p {
   box-shadow: none;
 }
 
-.keypad__actual {
-  min-height: var(--tactil-min);
-  font-size: 0.95rem;
-}
-
-/* Pantallas bajas (el teléfono en horizontal): se encoge la letra, nunca el área táctil.
-   Si aun así no cabe, la hoja se desplaza, que es mejor que una tecla de 40 px. */
+/* Pantallas bajas: se encoge la letra, nunca el área táctil */
 :root[data-juego='compacta'] .keypad__key {
   font-size: 1.15rem;
 }
@@ -1002,9 +1001,65 @@ p {
   display: none;
 }
 
+/* ---------- Tarjetas plegadas ---------- */
+
+/* En pantallas bajas las tarjetas se pliegan en una barra, para dejarle el sitio a la mesa y
+   al panel de cantar. El alto de la barra lo reserva layout.js. */
+.players-fold {
+  height: 100%;
+}
+
+.players-fold__summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 100%;
+  /* Abierta, la zona pasa a alto automático y el 100% deja de valer: nunca por debajo del
+     mínimo táctil, que esta barra es lo único que vuelve a cerrar la lista */
+  min-height: var(--tactil-min);
+  padding: 0 0.75rem;
+  color: var(--color-texto);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  background: var(--color-panel);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+  list-style: none;
+  cursor: pointer;
+}
+
+.players-fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.players-fold[open] .players-fold__summary {
+  border-radius: var(--radio) var(--radio) 0 0;
+  box-shadow: none;
+}
+
+.players-fold[open] .players {
+  padding: 0.5rem;
+  background: var(--color-panel);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-top: 0;
+  border-radius: 0 0 var(--radio) var(--radio);
+}
+
+/* Abierta, la lista cae por encima de la mesa en vez de quedar apretada dentro de la barra */
+.hud__players:has(details[open]) {
+  height: auto;
+  max-height: var(--zona-players-abierto);
+  z-index: 2;
+}
+
 /* ---------- Entrada de la partida ---------- */
 
-/* Arranca en negro y se abre como un túnel mientras suena la cerveza */
+/* Arranca en negro y se abre como un túnel mientras suena la cerveza. El negro no es un
+   fondo: es el borde enorme de un agujero que crece, porque un fondo se pinta por debajo de
+   la imagen y el agujero no destaparía nada. Y el agujero arranca de 2 px, no de cero,
+   porque un elemento sin tamaño no pinta su sombra. */
 .intro {
   position: fixed;
   inset: 0;
@@ -1015,23 +1070,22 @@ p {
 }
 
 .intro__hole {
-  width: 0;
-  height: 0;
-  margin-top: 8vh;
+  width: 2px;
+  height: 2px;
+  margin-top: 6vh;
   border-radius: 50%;
-  /* El negro de alrededor vive en la sombra: al crecer el agujero, se va abriendo */
   box-shadow: 0 0 0 100vmax var(--color-fondo);
-  animation: abrir-tunel 1.5s cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  animation: abrir-tunel 1.2s ease-in forwards;
 }
 
 @keyframes abrir-tunel {
   from {
-    width: 0;
-    height: 0;
+    width: 2px;
+    height: 2px;
   }
   to {
-    width: 220vmax;
-    height: 220vmax;
+    width: 230vmax;
+    height: 230vmax;
   }
 }
 

@@ -150,8 +150,10 @@ function call(state, action) {
 function believe(state, action) {
   assertPhase(state, PHASES.DECIDE);
   assertTurn(state, action.playerId);
+  // Creer un Quispe es perder la ronda: no hay nada más alto que cantar después. No es una
+  // equivocación, así que tampoco es Cholada.
   if (getLastCall(state).value === QUISPE) {
-    return endRound(state, { type: RESULTS.CHOLADA, reason: CHOLADA_REASONS.BELIEVED_QUISPE, loserId: action.playerId });
+    return endRound(state, { type: RESULTS.BELIEVED_QUISPE, loserId: action.playerId });
   }
   // Recibe el cubilete, vuelve a tirar y le toca cantar más alto que la jugada anterior
   return { ...state, phase: PHASES.ROLL };

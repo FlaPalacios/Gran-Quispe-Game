@@ -60,6 +60,12 @@ describe('roundReaction', () => {
     });
   });
 
+  it('creer un Quispe deja al que creyó con cara de derrota y su risa', () => {
+    const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 21);
+    const over = act(called, 'BELIEVE', 'beto');
+    expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'caught', sound: 'loss' });
+  });
+
   it('en una Cholada se queda el perdedor y no hay remate: ya sonó la Cholada', () => {
     const called = act(roll(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 62);
     const cholada = act(roll(act(called, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 54);

@@ -295,17 +295,25 @@ describe('Cholada', () => {
 });
 
 describe('creer un Quispe', () => {
-  it('quien cree un Quispe pierde, aunque no fuera cierto', () => {
+  it('quien cree un Quispe pierde, aunque no fuera cierto, y no es Cholada', () => {
     let s = act(rollAs(newGame(), 'ana', [3, 1]), 'CALL', 'ana', QUISPE);
     s = act(s, 'BELIEVE', 'beto');
     expect(s.round.result).toMatchObject({
-      type: RESULTS.CHOLADA,
-      reason: CHOLADA_REASONS.BELIEVED_QUISPE,
+      type: RESULTS.BELIEVED_QUISPE,
       loserId: 'beto',
       cost: 1,
       revealed: false,
     });
+    expect(s.round.result.reason).toBeUndefined();
     expect(canSeeDice(s, 'beto')).toBe(false);
+  });
+
+  it('tampoco se destapa con la variante de destapar en Cholada', () => {
+    const variants = { revealOnCholada: { enabled: true } };
+    let s = act(rollAs(newGame({ variants }), 'ana', [3, 1]), 'CALL', 'ana', QUISPE);
+    s = act(s, 'BELIEVE', 'beto');
+    expect(s.round.result).toMatchObject({ revealed: false, dice: null, actual: null });
+    expect(canSeeDice(s, 'cata')).toBe(false);
   });
 });
 

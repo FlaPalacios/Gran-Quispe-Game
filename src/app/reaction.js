@@ -18,6 +18,8 @@ export function roundReaction(game, { revealing = false } = {}) {
 
   const won = game.phase === PHASES.GAME_OVER;
   const doubted = result.type === RESULTS.DOUBT;
+  // La Cholada ya trae su propio sonido; las demás derrotas se rematan con una risa
+  const cholada = result.type === RESULTS.CHOLADA;
   // Al que cantó lo pillaron mintiendo; al que desconfió, el otro decía la verdad
   const caughtLying = doubted && result.loserId === result.callerId;
   const wrongDoubt = doubted && result.loserId === result.doubterId;
@@ -30,6 +32,6 @@ export function roundReaction(game, { revealing = false } = {}) {
     pose: won || wrongDoubt ? 'gloating' : 'caught',
     // El remate entra después del destape. Ganar la partida manda sobre quedar eliminado, y
     // eso sobre cómo terminó la ronda. La Cholada ya sonó con lo suyo al destapar.
-    sound: won ? 'win' : eliminated ? 'eliminated' : caughtLying ? 'caught' : wrongDoubt ? 'loss' : null,
+    sound: won ? 'win' : eliminated ? 'eliminated' : caughtLying ? 'caught' : cholada ? null : 'loss',
   };
 }

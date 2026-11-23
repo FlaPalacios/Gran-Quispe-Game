@@ -27,6 +27,20 @@ const MIN_PLAY_HEIGHT = 172;
 const MIN_SCENE_HEIGHT = 140;
 // Lo que debe quedar libre bajo las tarjetas para que se vea la mesa
 const MIN_TABLE_GAP = 90;
+// Por debajo de este alto, las tarjetas se pliegan en una barra que se abre al tocarla, y el
+// sitio que dejan se lo queda la zona de juego: en un celular bajo manda poder cantar bien.
+const FOLD_PLAYERS_BELOW = 780;
+const FOLDED_PLAYERS_HEIGHT = 44;
+// Parte del alto que se lleva la zona de juego. Con las tarjetas plegadas se queda con más,
+// que es justo para lo que se pliegan.
+const PLAY_SHARE = { folded: 0.42, open: 0.33 };
+// Hasta dónde puede caer la lista desplegada sobre la escena
+const OPEN_PLAYERS_SHARE = 0.75;
+
+// Umbrales que la vista necesita para decidir qué versión de cada cosa dibuja. Viven aquí,
+// con las medidas de las que dependen, y los publica src/app/stage.js.
+export const ROOMY_CARD_HEIGHT = 92;
+export const ROOMY_PLAY_HEIGHT = 220;
 
 const clamp = (value, min, max) => Math.min(Math.max(max, min), Math.max(min, value));
 const rect = (x, y, width, height) => ({
@@ -81,8 +95,14 @@ function mobileLayout(width, height, insets, playerCount) {
 
   const topBar = rect(frame.x + gutter, frame.y + 8, inner, clamp(frame.height * 0.07, 48, 60));
 
-  // La zona de juego se reserva primero, pero sin dejar a la escena por debajo de su mínimo
-  const playHeight = clamp(frame.height * 0.33, MIN_PLAY_HEIGHT, Math.max(frame.height - MIN_SCENE_HEIGHT, 0));
+  // La zona de juego se reserva primero, pero sin dejar a la escena por debajo de su mínimo.
+  // Con las tarjetas plegadas se queda con más sitio, que es para lo que se pliegan.
+  const folded = frame.height < FOLD_PLAYERS_BELOW;
+  const playHeight = clamp(
+    frame.height * (folded ? PLAY_SHARE.folded : PLAY_SHARE.open),
+    MIN_PLAY_HEIGHT,
+    Math.max(frame.height - MIN_SCENE_HEIGHT, 0),
+  );
   const scene = rect(frame.x, frame.y, frame.width, frame.height - playHeight);
 
   const { columns, rows } = playersGrid(inner, playerCount, CARD_MIN_WIDTH.mobile);
@@ -92,9 +112,14 @@ function mobileLayout(width, height, insets, playerCount) {
     frame.x + gutter,
     playersTop,
     inner,
-    // Nunca pasan del borde bajo de la escena: debajo va el panel de juego, que las taparía
-    playersHeight(rows, rowHeight, bottomOf(scene) - playersTop - MIN_TABLE_GAP),
+    folded
+      ? FOLDED_PLAYERS_HEIGHT
+      : // Nunca pasan del borde bajo de la escena: debajo va el panel de juego, que las taparía
+        playersHeight(rows, rowHeight, bottomOf(scene) - playersTop - MIN_TABLE_GAP),
   );
+  players.folded = folded;
+  // Desplegada, la lista cae sobre la mesa: hasta aquí, y el resto se desplaza
+  players.openHeight = Math.round(scene.height * OPEN_PLAYERS_SHARE);
   players.columns = columns;
   players.gap = ROW_GAP;
   players.rowHeight = Math.round(rowHeight);
@@ -149,6 +174,9 @@ function desktopLayout(width, height, insets, playerCount) {
     // Se reserva antes el mínimo de la zona de juego, para que no colapse
     playersHeight(rows, rowHeight, contentHeight - MIN_PLAY_HEIGHT - gap),
   );
+  // En dos columnas las tarjetas tienen su propio sitio: no estorban y no hace falta plegarlas
+  players.folded = false;
+  players.openHeight = players.height;
   players.columns = columns;
   players.gap = ROW_GAP;
   players.rowHeight = Math.round(rowHeight);

@@ -7,15 +7,12 @@ import { h } from './dom.js';
 const SAFETY_MS = 3000;
 
 export function PlayIntro() {
-  const hole = h('span', { class: 'intro__hole' });
-  const intro = h('div', { class: 'intro', 'aria-hidden': 'true' }, hole);
+  const intro = h('div', { class: 'intro', 'aria-hidden': 'true' }, h('span', { class: 'intro__hole' }));
   const safety = setTimeout(() => intro.remove(), SAFETY_MS);
-  const done = () => {
+  // El túnel lo anima el agujero y el fundido el velo: vale cualquiera de las dos
+  intro.addEventListener('animationend', () => {
     clearTimeout(safety);
     intro.remove();
-  };
-  // Cada forma de abrir tiene su animación: el túnel en el agujero, el fundido en el marco
-  hole.addEventListener('animationend', done);
-  intro.addEventListener('animationend', (e) => e.target === intro && done());
+  });
   return intro;
 }

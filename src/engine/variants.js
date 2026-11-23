@@ -44,5 +44,7 @@ export function lossCost(variants, result) {
 }
 
 export function revealsDice(variants, result) {
-  return result.type === RESULTS.DOUBT || variants.revealOnCholada.enabled;
+  if (result.type === RESULTS.DOUBT) return true;
+  // La variante destapa Choladas, y creer un Quispe no lo es: quien creyó se queda con la duda
+  return result.type === RESULTS.CHOLADA && variants.revealOnCholada.enabled;
 }

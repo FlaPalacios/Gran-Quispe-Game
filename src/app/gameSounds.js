@@ -14,6 +14,10 @@ export function connectGameSounds(store) {
   let wasRevealing = false;
   let lastShakeAt = 0;
   let pendingSting = null;
+  // Las tres risas se turnan, en vez de salir al azar, para que no toque dos veces seguidas
+  // la misma. El turno es de esta partida: empieza de nuevo con cada conexión.
+  let nextLaugh = 0;
+  const laugh = () => LAUGHS[nextLaugh++ % LAUGHS.length];
 
   const unsubscribeSignals = store.onSignal((name) => {
     if (name === 'gameStart') {
@@ -35,7 +39,7 @@ export function connectGameSounds(store) {
     if (destapando && !revealing && game?.round.result) {
       if (game.round.result.type === RESULTS.CHOLADA) playSfx('cholada');
       const { sound } = roundReaction(game);
-      if (sound) for (const key of stingFor(sound)) playSfx(key);
+      if (sound) for (const key of stingFor(sound, laugh)) playSfx(key);
       return;
     }
 
@@ -63,9 +67,11 @@ export function connectGameSounds(store) {
       playSfx('reveal');
       return;
     }
-    playSfx('cholada');
+    // La risa de la Cholada es solo para las Choladas: creer un Quispe no es equivocarse,
+    // así que ahí solo entra el remate
+    if (result.type === RESULTS.CHOLADA) playSfx('cholada');
     const { sound } = roundReaction(game);
-    if (sound) pendingSting = setTimeout(() => stingFor(sound).forEach((key) => playSfx(key)), STING_DELAY_MS);
+    if (sound) pendingSting = setTimeout(() => stingFor(sound, laugh).forEach((key) => playSfx(key)), STING_DELAY_MS);
   });
 
   return () => {
@@ -75,15 +81,16 @@ export function connectGameSounds(store) {
   };
 }
 
-// Las risas de cuando pillan a un mentiroso: suena una al azar, para que no canse
+// Las tres risas de la mesa
 const LAUGHS = ['laughMan', 'laughMan2', 'laughGranny'];
 
-// Qué efectos rematan cada desenlace. Al ganar la partida suenan dos a la vez: el remate
-// con el brindis.
-function stingFor(outcome) {
+// Qué efectos rematan cada desenlace. Perder la ronda se celebra con una risa, la pillen a
+// uno mintiendo o no. Al ganar la partida suenan dos a la vez: el remate con el brindis.
+function stingFor(outcome, laugh) {
   switch (outcome) {
     case 'caught':
-      return [LAUGHS[Math.floor(Math.random() * LAUGHS.length)]];
+    case 'loss':
+      return [laugh()];
     case 'win':
       return ['win', 'cheer'];
     default:
