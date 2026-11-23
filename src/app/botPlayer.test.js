@@ -33,7 +33,8 @@ describe('connectBots', () => {
     // rng 0: abre el primero de la lista, la persona
     const store = newStore(() => 0);
     connectBots(store, { rng: () => 0 });
-    store.start({ config: { mode: 'classic' }, players: [{ id: 'ana', name: 'Ana' }, bot('b', 'honest')] });
+    // Dos personas: con una sola no hay pantalla de pase
+    store.start({ config: { mode: 'classic' }, players: [{ id: 'ana', name: 'Ana' }, bot('b', 'honest'), { id: 'cata', name: 'Cata' }] });
     vi.advanceTimersByTime(10000);
     expect(store.get().game).toMatchObject({ phase: 'ROLL', currentPlayerId: 'ana' });
     expect(needsPassScreen(store.get())).toBe(true);
@@ -49,7 +50,7 @@ describe('connectBots', () => {
     vi.useFakeTimers();
     const store = newStore(() => 0); // abre el bot, primero de la lista
     connectBots(store, { rng: () => 0.99 }); // canta la verdad y luego cree
-    store.start({ config: { mode: 'classic' }, players: [bot('b', 'honest'), { id: 'ana', name: 'Ana' }] });
+    store.start({ config: { mode: 'classic' }, players: [bot('b', 'honest'), { id: 'ana', name: 'Ana' }, { id: 'cata', name: 'Cata' }] });
     vi.advanceTimersByTime(10000);
     expect(store.get().game).toMatchObject({ phase: 'DECIDE', currentPlayerId: 'ana' });
     expect(needsPassScreen(store.get())).toBe(true);

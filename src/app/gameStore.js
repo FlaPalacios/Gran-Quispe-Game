@@ -32,7 +32,20 @@ export function createGameStore({
   const signalListeners = new Set();
 
   const snapshot = () => ({ game, viewerId, turnStartedAt, revealing, playersBefore });
-  const notify = () => listeners.forEach((fn) => fn(snapshot()));
+  const notify = () => {
+    skipLonePass();
+    listeners.forEach((fn) => fn(snapshot()));
+  };
+
+  // Con una sola persona en pie (los demás son bots) no hay a quién pasarle el celular:
+  // su turno se confirma solo, y su reloj de presión arranca en ese momento
+  function skipLonePass() {
+    const current = game?.players.find((p) => p.id === game.currentPlayerId);
+    if (!current || current.isBot || viewerId === current.id) return;
+    if (game.players.filter((p) => !p.isBot && !p.eliminated).length !== 1) return;
+    viewerId = current.id;
+    turnStartedAt = now();
+  }
   const signal = (name) => signalListeners.forEach((fn) => fn(name));
   const persist = () => (game.phase === PHASES.GAME_OVER ? clear() : save(game));
 

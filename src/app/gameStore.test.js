@@ -61,6 +61,14 @@ describe('gameStore', () => {
     expect(viewerCanSeeDice(store.get())).toBe(false);
   });
 
+  it('jugando una sola persona contra bots no hay pantalla de pase', () => {
+    const { store } = newStore();
+    store.start({ config: { mode: 'classic' }, players: [{ id: 'ana', name: 'Ana' }, { id: 'b', name: 'Bot', isBot: true, personality: 'honest' }] });
+    expect(store.get()).toMatchObject({ viewerId: 'ana' });
+    expect(store.get().turnStartedAt).not.toBeNull();
+    expect(needsPassScreen(store.get())).toBe(false);
+  });
+
   it('las señales de la interfaz llegan a quien escucha y no tocan el estado', () => {
     const { store } = newStore();
     store.start(SETUP);
