@@ -133,9 +133,11 @@ export function createGameStore({
 }
 
 // La pantalla de pase se muestra cuando le toca a alguien que aún no confirmó que tiene el celular
+// Los bots no miran la pantalla: su turno se juega a la vista de todos sin mostrar sus dados
 export function needsPassScreen({ game, viewerId }) {
   if (!game || !game.currentPlayerId) return false;
-  return viewerId !== game.currentPlayerId;
+  const current = game.players.find((p) => p.id === game.currentPlayerId);
+  return !current?.isBot && viewerId !== game.currentPlayerId;
 }
 
 // Los dados se muestran solo si el motor lo permite a quien tiene el celular, nunca detrás

@@ -79,6 +79,8 @@ Cada personaje tiene tres caras (`POSES`): `neutral`, `caught` (`-descubierto`: 
 
 **Mesa, cubilete y dados (`src/scenes/shared/props.js`):** son imágenes, no dibujo por código: la mesa de paño verde, las tres poses del cubilete (`cubilete-tapado`, `-inclinado` para mirar los dados a escondidas y `-volcado` para el destape) y los seis dados. Si alguna falta, la escena dibuja su versión vectorial de respaldo y se sigue jugando. `tableProps(area)` da las medidas: dónde cae el paño dentro de la mesa, dónde se apoya el cubilete y dónde quedan los dados. Esas fracciones salen del recorte, así que si cambia el dibujo de la mesa hay que correr `recursos-fv/scripts/recortar-objetos.py` y copiar los números que imprime. Las tres poses del cubilete comparten lienzo y punto de apoyo (el borde de abajo al centro), por eso cambiar de pose es cambiar de imagen y el cubilete no se mueve de sitio.
 
+**Bots (`src/engine/bots.js` y `src/app/botPlayer.js`):** el motor decide, la app pone el ritmo. `botAction(state, { rng })` es puro y devuelve la acción del bot en turno según su personalidad (`PERSONALITIES`: `honest` miente poco, `bluffer` miente mucho y sube más al mentir, `suspicious` desconfía más). Canta lo que sacó si alcanza y no le toca mentir; desconfía más cuanto más alta es la jugada, y casi siempre de un Quispe. No usa el comodín de espía. `connectBots(store)` espera un poco en cada turno de bot (sacude el cubilete con la señal `cupShake` antes de tirar) y despacha su acción; si no queda ningún humano en pie, también pasa a la ronda siguiente. El turno de un bot no pide pasar el celular (`needsPassScreen` es falso) y el HUD no muestra botones, solo qué está haciendo. Sus dados nunca se ven: `canSeeDice` exige que el que mira sea quien tiró.
+
 **Reacción al terminar la ronda (`src/app/reaction.js`):** `roundReaction(game)` devuelve quién se queda en pantalla, con qué cara y qué remate suena. Lo usan la escena y los sonidos, para que la cara y el sonido no puedan contar cosas distintas.
 
 **Depurar en el navegador:** en `npm run dev`, `window.__game` (Phaser) y `window.__store` están disponibles en la consola.
@@ -112,7 +114,7 @@ src/
     rules.js           # máquina de estados: createGame, applyAction, consultas
     modes.js           # Clásico, Por vidas, Castigo personalizado
     variants.js        # registro de variantes, costo de perder y destape
-    bots.js            # personalidades de bots (Fase 4)
+    bots.js            # personalidades de bots y su decisión en cada turno
   app/                 # puente motor ↔ vista
     gameStore.js       # estado, azar real, guardado, suscripciones
     stage.js           # zonas de la pantalla: las publica como variables CSS y avisa a la escena
@@ -121,6 +123,7 @@ src/
     gameSounds.js      # qué suena en cada cambio de fase
     characters.js      # qué personaje le toca a cada jugador, y sus caras
     reaction.js        # quién reacciona al terminar la ronda, con qué cara y qué sonido
+    botPlayer.js       # juega solo el turno de los bots, con pausas para que se vea
     preferences.js     # silencio y siluetas, guardados entre partidas
   scenes/              # CantinaScene: la mesa en los tres escenarios (cambia el fondo según config.scenario; personajes solo en la cantina)
     shared/            # layout.js (responsivo), theme.js (colores y fuentes), props.js (mesa, cubilete, dados), assets.js (carga)
@@ -149,6 +152,8 @@ recursos-fv/           # plan, referencias y assets de origen (la subcarpeta ign
 | `game-logic` | Subagente, solo `src/engine/` | Al tocar reglas, modos, variantes o bots |
 | `phaser-scenes` | Subagente, solo `src/scenes/` | Al crear o ajustar escenas, animaciones, cubilete y dados |
 | `code-reviewer` | Subagente, solo lectura | Antes de dar por cerrada cualquier tarea de código |
+
+Para cambios simples no hace falta pasar por los subagentes (pedido de Flavio, 2026-11-23): se usan cuando el cambio es grande o delicado.
 | `identidad-visual` | Skill | Al crear o integrar gráficos, colores o fuentes |
 | `codigo-limpio-quispe` | Skill | Al escribir o revisar cualquier código |
 
@@ -277,8 +282,8 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 
 ### Fase 4: Bots
 
-- [ ] Personalidades que mienten y desconfían con distinto criterio
-- [ ] Bots sumables a cualquier partida, con turno automático
+- [x] Personalidades que mienten y desconfían con distinto criterio (honesto, farolero, desconfiado)
+- [x] Bots sumables a cualquier partida, con turno automático (en la configuración, cada asiento elige Persona o un bot)
 
 ### Fase 5: Después del MVP
 

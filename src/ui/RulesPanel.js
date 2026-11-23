@@ -5,10 +5,12 @@ import { getPreference, setPreference } from '../app/preferences.js';
 import { MAX_LIVES, MIN_LIVES, DEFAULT_LIVES, MODES } from '../engine/modes.js';
 import { MAX_PLAYERS, MIN_PLAYERS, SCENARIOS } from '../engine/rules.js';
 import { VARIANTS, resolveVariants } from '../engine/variants.js';
+import { PERSONALITIES } from '../engine/bots.js';
 import { t } from '../i18n/index.js';
 import { h } from './dom.js';
 
 const DEFAULT_PLAYER_COUNT = 4;
+const HUMAN = 'human';
 
 export function defaultDraft() {
   return {
@@ -17,9 +19,15 @@ export function defaultDraft() {
     lives: DEFAULT_LIVES,
     penaltyText: '',
     names: Array.from({ length: DEFAULT_PLAYER_COUNT }, () => ''),
+    // Quién juega cada asiento: 'human' o la personalidad de un bot
+    kinds: Array.from({ length: DEFAULT_PLAYER_COUNT }, () => HUMAN),
     variants: resolveVariants(),
   };
 }
+
+// Nombre de un asiento que se dejó vacío
+const defaultName = (kind, i) =>
+  kind === HUMAN ? t('setup.defaultName', { n: i + 1 }) : t('setup.botName', { name: t(`bot.${kind}.short`), n: i + 1 });
 
 // Convierte el borrador del panel en la entrada de createGame
 export function draftToSetup(draft) {
@@ -31,10 +39,11 @@ export function draftToSetup(draft) {
       penaltyText: draft.penaltyText.trim(),
       variants: draft.variants,
     },
-    players: draft.names.map((name, i) => ({
-      id: `p${i + 1}`,
-      name: name.trim() || t('setup.defaultName', { n: i + 1 }),
-    })),
+    players: draft.names.map((name, i) => {
+      const kind = draft.kinds[i];
+      const isBot = kind !== HUMAN;
+      return { id: `p${i + 1}`, name: name.trim() || defaultName(kind, i), isBot, personality: isBot ? kind : null };
+    }),
   };
 }
 
@@ -111,22 +120,38 @@ export function RulesPanel({ draft, onBack, onStart }) {
         onChange: (n) =>
           update((d) => {
             d.names = n > d.names.length ? [...d.names, ''] : d.names.slice(0, n);
+            d.kinds = n > d.kinds.length ? [...d.kinds, HUMAN] : d.kinds.slice(0, n);
           }),
       }),
       h(
         'div',
         { class: 'names' },
         draft.names.map((name, i) =>
-          h('input', {
-            class: 'input',
-            type: 'text',
-            maxlength: '16',
-            value: name,
-            placeholder: t('setup.defaultName', { n: i + 1 }),
-            'aria-label': t('setup.playerName', { n: i + 1 }),
-            // Sin volver a dibujar, para no perder el foco al escribir
-            onInput: (e) => (draft.names[i] = e.target.value),
-          }),
+          h(
+            'div',
+            { class: 'seat' },
+            h('input', {
+              class: 'input',
+              type: 'text',
+              maxlength: '16',
+              value: name,
+              placeholder: defaultName(draft.kinds[i], i),
+              'aria-label': t('setup.playerName', { n: i + 1 }),
+              // Sin volver a dibujar, para no perder el foco al escribir
+              onInput: (e) => (draft.names[i] = e.target.value),
+            }),
+            h(
+              'select',
+              {
+                class: 'input',
+                'aria-label': t('setup.playerKind', { n: i + 1 }),
+                onChange: (e) => update((d) => (d.kinds[i] = e.target.value)),
+              },
+              [HUMAN, ...Object.keys(PERSONALITIES)].map((kind) =>
+                h('option', { value: kind, selected: draft.kinds[i] === kind }, t(kind === HUMAN ? 'setup.human' : `bot.${kind}`)),
+              ),
+            ),
+          ),
         ),
       ),
     );

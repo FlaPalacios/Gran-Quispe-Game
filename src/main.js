@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { preloadSfx, sfxDuration } from './app/audio.js';
+import { connectBots } from './app/botPlayer.js';
 import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
 import { createStage } from './app/stage.js';
@@ -12,6 +13,7 @@ const store = createGameStore({ revealMs: () => sfxDuration('reveal') });
 // Calcula las zonas de la pantalla y las publica como variables CSS para el HUD
 const stage = createStage(store);
 connectGameSounds(store);
+connectBots(store);
 mountApp(document.getElementById('ui'), store, stage);
 
 // Los navegadores solo permiten sonido tras un gesto del usuario: se precarga en el primer toque

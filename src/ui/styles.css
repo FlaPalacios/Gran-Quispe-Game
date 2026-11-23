@@ -376,6 +376,12 @@ p {
   gap: 0.5rem;
 }
 
+/* Un asiento: el nombre y quién lo juega (persona o bot) */
+.seat {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .variant {
   display: grid;
   gap: 0.5rem;

@@ -1,6 +1,7 @@
 // HUD de la partida (HTML sobre el canvas): panel de turno, tarjetas de jugadores y acciones.
 // Solo lee el estado y envía acciones al store; las reglas las decide el motor.
 import { avatarFor } from '../app/characters.js';
+import { onlyBotsLeft } from '../app/botPlayer.js';
 import { viewerCanSeeDice } from '../app/gameStore.js';
 import { CALL_SCALE, QUISPE, readDice } from '../engine/dice.js';
 import { LETTERS } from '../engine/modes.js';
@@ -65,6 +66,13 @@ export function GameHud({
 function turnCard(snapshot, current, store, withClock) {
   const { game } = snapshot;
   const last = getLastCall(game);
+  // El turno de un bot se juega solo: el panel cuenta qué está haciendo
+  if (current?.isBot) {
+    const caller = last && playerName(game, last.playerId);
+    const card = panel(t('game.turnOf', { name: current.name }), t(`game.bot.${game.phase}`, { name: caller, call: last && formatCall(last.value) }));
+    card.setAttribute('role', 'status'); // para que un lector de pantalla cuente qué hace el bot
+    return card;
+  }
   switch (game.phase) {
     case PHASES.ROLL:
       return panel(
@@ -150,7 +158,7 @@ function resultCard(game) {
 function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }) {
   const { game } = snapshot;
   // Destapando no hay nada que hacer todavía: ni seguir a la ronda siguiente
-  if (snapshot.revealing) return null;
+  if (snapshot.revealing || current?.isBot) return null;
   const send = (type) => () => store.dispatch({ type, playerId: current?.id });
   switch (game.phase) {
     case PHASES.ROLL: {
@@ -178,6 +186,7 @@ function actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu })
         h('button', { class: 'btn btn--primary btn--big', onClick: send('DOUBT') }, h('span', { 'aria-hidden': 'true' }, '✕ '), t('game.doubt')),
       );
     case PHASES.ROUND_OVER:
+      if (onlyBotsLeft(game)) return null;
       return h('div', { class: 'actions' }, h('button', { class: 'btn btn--primary btn--big', onClick: () => store.dispatch({ type: 'NEXT_ROUND' }) }, t('result.next')));
     case PHASES.GAME_OVER:
       return h(
