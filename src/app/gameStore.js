@@ -6,9 +6,9 @@
 import { PHASES, applyAction, canSeeDice, createGame } from '../engine/rules.js';
 import { clearSave, saveGame } from '../storage/localSave.js';
 
-// Lo que tarda el destape si no se sabe cuánto dura su sonido (sin Web Audio, o antes de
-// que termine de cargar): más o menos lo que dura hoy sfx-destapar. El suspenso ocurre igual
-// aunque el sonido esté silenciado. El tope existe para que, si algún día se reexporta el
+// Lo que tarda el destape si nadie dice otra cosa con `revealMs`. Ya no suena nada mientras
+// sube el cubilete (Flavio quitó sfx-destapar), así que el plazo es fijo: el que tenía aquel
+// sonido, que daba buen suspenso. El tope existe para que, si algún día se reexporta el
 // sonido más largo, la pantalla no se quede sin botones una eternidad.
 const REVEAL_FALLBACK_MS = 2200;
 const MAX_REVEAL_MS = 2600;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { preloadSfx, sfxDuration } from './app/audio.js';
+import { preloadSfx } from './app/audio.js';
 import { connectBots } from './app/botPlayer.js';
 import { connectGameSounds } from './app/gameSounds.js';
 import { createGameStore } from './app/gameStore.js';
@@ -8,8 +8,7 @@ import { CantinaScene } from './scenes/CantinaScene.js';
 import { COLORS, FONTS, toCss } from './scenes/shared/theme.js';
 import { mountApp } from './ui/app.js';
 
-// El suspenso del destape dura lo que dure su sonido
-const store = createGameStore({ revealMs: () => sfxDuration('reveal') });
+const store = createGameStore();
 // Calcula las zonas de la pantalla y las publica como variables CSS para el HUD
 const stage = createStage(store);
 connectGameSounds(store);

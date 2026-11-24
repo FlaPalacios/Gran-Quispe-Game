@@ -243,8 +243,8 @@ p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Arriba van la lámpara y la repisa del fondo: el logo y los botones se apoyan abajo */
-  justify-content: flex-end;
+  /* El logo cuelga bajo la lámpara del fondo y los botones se apoyan abajo */
+  justify-content: space-between;
   gap: 2rem;
   background: var(--color-fondo) url('../assets/images/shared/menu-fondo-vertical.webp') center top / cover no-repeat;
 }
@@ -257,8 +257,13 @@ p {
 
 /* El logo ya viene recortado con transparencia (ver recursos-fv/documentos/encargos/Fase 2 — Assets.md) */
 .logo {
-  width: min(80%, 460px);
+  width: auto;
   height: auto;
+  max-width: min(78%, 460px);
+  max-height: 42vh;
+  /* Justo debajo del foco: el fondo va pegado arriba, así que el foco cae siempre a esta altura */
+  margin-top: clamp(84px, 13vh, 150px);
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.55));
 }
 
 .menu__actions {
@@ -902,7 +907,9 @@ p {
 }
 
 .letter.is-lost {
-  background: var(--color-retablo-rojo);
+  /* Un punto más oscuro que el rojo del retablo: con las letras tan chicas, el crema sobre
+     #c23a2b quedaba en 4,47:1; así pasa a 4,68:1 (mínimo 4,5) */
+  background: #bd3829;
   border-color: var(--color-borde);
   color: var(--color-texto);
 }
@@ -1017,22 +1024,7 @@ p {
 }
 
 :root[data-modo='pc'] .menu {
-  flex-direction: row;
-  justify-content: center;
-  /* Debajo de la repisa del fondo, que ocupa la mitad de arriba al centro */
-  align-items: flex-end;
-  gap: 8vw;
-  padding-bottom: 8vh;
   background-image: url('../assets/images/shared/menu-fondo-horizontal.webp');
-}
-
-:root[data-modo='pc'] .logo {
-  width: min(36%, 520px);
-  margin: 0;
-}
-
-:root[data-modo='pc'] .menu__actions {
-  margin: 0;
 }
 
 :root[data-modo='pc'] .setup__body {

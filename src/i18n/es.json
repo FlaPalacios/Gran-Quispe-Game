@@ -178,5 +178,7 @@
   "reaction.mentiroso": "¡Mentiroso!",
   "reaction.salud": "¡Salud!",
   "reaction.sorpresa": "¡Sorpresa!",
-  "online.error.BAD_REACTION": "Esa reacción no existe."
+  "online.error.BAD_REACTION": "Esa reacción no existe.",
+  "setup.voices": "Voces de los personajes",
+  "setup.voices.description": "Cantan las jugadas y dicen su frase al creer, desconfiar y perder."
 }

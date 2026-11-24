@@ -256,6 +256,7 @@ export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start
     return card(
       t('setup.display'),
       preferenceRow('music', setMusicOn),
+      preferenceRow('voices'),
       preferenceRow('simpleKeypad'),
       preferenceRow('silhouettes'),
     );

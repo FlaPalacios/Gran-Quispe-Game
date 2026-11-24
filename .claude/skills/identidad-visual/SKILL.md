@@ -123,4 +123,4 @@ las usa para colocar todo sobre el paño. Si se reexporta alguna, hay que correr
 
 ## El logo
 
-El original (`recursos-fv/graficos/Gran_Quispe_logo.png`) viene sobre fondo negro con halo. La versión del juego se genera con transparencia real a partir del brillo de cada píxel, no con `mix-blend-mode`: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundirse con él. El script está en `recursos-fv/documentos/encargos/Fase 2 — Assets.md`.
+El original (`recursos-fv/graficos/Gran_Quispe_logo.png`) viene sobre fondo negro con halo. La versión del juego (`recursos-fv/scripts/recortar-logo.py`) se recorta con un contorno sólido: todo el dibujo opaco, incluido el contorno negro y la boca del cubilete, y el halo descartado. Antes la transparencia salía del brillo de cada píxel y el cuero oscuro quedaba medio transparente sobre el fondo del menú. No se usa `mix-blend-mode`: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundirse con él.

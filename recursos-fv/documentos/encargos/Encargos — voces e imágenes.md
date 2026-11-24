@@ -103,3 +103,22 @@ Pide también la versión vertical (9:16, 1440x2560) con el mismo prompt: el cel
 No hace falta generarlos: Claude los puede armar con el logo y el fondo que ya hay (ícono de
 512 px y la imagen de 1200x630 que sale al mandar el enlace por WhatsApp). Si prefieres uno a
 medida, que sea el cubilete con los dos dados del logo, sin texto, sobre fondo transparente.
+
+## 7. Banner de entrada (y la imagen para compartir)
+
+Llamativo, sin personajes, que se note que es un juego de engaño. Una sola imagen sirve para las
+dos cosas: la que sale al mandar el enlace por WhatsApp y la portada de entrada.
+
+> Dramatic hero banner for a bluffing dice game, no people, no faces, no text, no logos, no
+> brands. Close-up on a dark green felt table at night inside an Andean cantina: a worn leather
+> dice cup with an Andean step-pattern band is lifted just a crack, a warm lamp beam slicing
+> through the gap and revealing only the edge of two bone-white dice, the rest hidden in shadow.
+> A second identical cup sits beside it, suspiciously turned the other way. Scattered clay cups
+> and a few dice in the foreground, one die balanced on its corner. Long dramatic shadows,
+> mystery and mischief, the feeling of "are they lying?". Painterly cartoon style with thick
+> black outlines, flat colors, burnt red #C23A2B, colonial blue #2F5D9E and gold #F2C230 accents
+> on warm dark browns, papel picado bunting blurred in the background. Leave the left third
+> calmer and darker so a logo can sit there. 1200x630.
+
+Pide también una versión vertical (1080x1920) con el mismo prompt, dejando el tercio de arriba
+más calmo para el logo.

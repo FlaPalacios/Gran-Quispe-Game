@@ -75,12 +75,12 @@ describe('connectGameSounds', () => {
     expect(sounds()).toEqual(['start']);
   });
 
-  it('mientras se destapa solo suena el cubilete levantándose', () => {
+  it('mientras se destapa no suena nada: el remate espera', () => {
     const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
     store.emit({ game: called });
     playSfx.mockClear();
     store.emit({ game: act(called, 'DOUBT', 'beto'), revealing: true });
-    expect(sounds()).toEqual(['reveal']);
+    expect(sounds()).toEqual([]);
   });
 
   it('el remate entra recién cuando termina el destape', () => {
@@ -112,7 +112,7 @@ describe('connectGameSounds', () => {
     }
   });
 
-  it('si la Cholada deja a alguien fuera, el remate entra después del golpe', () => {
+  it('si la Cholada deja a alguien fuera, suena solo el de quedar fuera', () => {
     vi.useFakeTimers();
     try {
       const start = createGame(
@@ -124,9 +124,9 @@ describe('connectGameSounds', () => {
       playSfx.mockClear();
       s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
       store.emit({ game: s });
-      expect(sounds()).toEqual(['cholada']);
+      expect(sounds()).toEqual([]);
       vi.advanceTimersByTime(500);
-      expect(sounds()).toEqual(['cholada', 'eliminated']);
+      expect(sounds()).toEqual(['eliminated']);
     } finally {
       vi.useRealTimers();
     }
@@ -165,7 +165,7 @@ describe('connectGameSounds', () => {
     expect(risas[1]).not.toBe(risas[0]);
   });
 
-  it('al ganar la partida suenan el remate y el brindis a la vez', () => {
+  it('al ganar la partida suena solo el brindis', () => {
     const start = createGame(
       { config: { mode: 'lives', lives: 1 }, players: PLAYERS.slice(0, 2) },
       { rng: rngFrom(0) },
@@ -176,7 +176,7 @@ describe('connectGameSounds', () => {
     store.emit({ game: over, revealing: true });
     playSfx.mockClear();
     store.emit({ game: over, revealing: false });
-    expect(sounds()).toEqual(['win', 'cheer']);
+    expect(sounds()).toEqual(['cheer']);
   });
 
   it('cada sacudida suena, pero no más rápido que el propio sonido', () => {

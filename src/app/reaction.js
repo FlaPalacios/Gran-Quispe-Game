@@ -42,13 +42,14 @@ export function roundReaction(game, { revealing = false } = {}) {
  * quien está en pantalla: al pillar a un mentiroso, en la mesa queda el pillado y quien lo
  * pilló le habla desde fuera del cuadro ("¡Te descubrí!"); al desconfiar mal, se ríe quien
  * cantó y el que perdió se lamenta.
- * @returns {{playerId: string, key: string}|null} null mientras la ronda sigue en juego.
+ * @returns {{playerId: string, key: string}|null} null mientras la ronda sigue en juego, o si
+ *   la ronda dejó a alguien fuera o terminó la partida.
  */
 export function roundVoice(game) {
   const result = game?.round?.result;
   if (!result) return null;
-  if (game.phase === PHASES.GAME_OVER) return { playerId: game.winnerId, key: 'gano' };
-  if (game.players.find((p) => p.id === result.loserId)?.eliminated) return { playerId: result.loserId, key: 'fuera' };
+  // Ganar la partida y quedar fuera se quedan con su sonido, sin voces (pedido de Flavio)
+  if (game.phase === PHASES.GAME_OVER || game.players.find((p) => p.id === result.loserId)?.eliminated) return null;
   // Pilló al mentiroso: habla quien desconfió
   if (result.type === RESULTS.DOUBT && result.loserId === result.callerId) return { playerId: result.doubterId, key: 'pille' };
   return { playerId: result.loserId, key: result.type === RESULTS.CHOLADA ? 'cholada' : 'pierdo' };

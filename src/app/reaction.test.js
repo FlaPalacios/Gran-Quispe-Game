@@ -103,11 +103,11 @@ describe('roundVoice', () => {
     expect(roundVoice(s)).toEqual({ playerId: 'beto', key: 'cholada' });
   });
 
-  it('quedar fuera y ganar la partida mandan sobre la ronda', () => {
+  it('quedar fuera y ganar la partida no llevan voz', () => {
     const out = act(act(roll(newGame({ mode: 'lives', lives: 1 }), 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
-    expect(roundVoice(out)).toEqual({ playerId: 'ana', key: 'fuera' });
+    expect(roundVoice(out)).toBe(null);
     const duel = newGame({ mode: 'lives', lives: 1 }, PLAYERS.slice(0, 2));
     const won = act(act(roll(duel, 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
-    expect(roundVoice(won)).toEqual({ playerId: 'beto', key: 'gano' });
+    expect(roundVoice(won)).toBe(null);
   });
 });

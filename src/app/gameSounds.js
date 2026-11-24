@@ -86,26 +86,25 @@ export function connectGameSounds(store) {
 
     if (game.phase !== PHASES.ROUND_OVER && game.phase !== PHASES.GAME_OVER) return;
     const { result } = game.round;
-    // Si hay que destapar, ahora solo suena el cubilete levantándose: el resto espera a que
-    // termine, que es cuando el store apaga `revealing`.
+    // Si hay que destapar, el remate espera a que termine, que es cuando el store apaga
+    // `revealing`. Mientras sube el cubilete solo habla quien desconfió.
     if (result.revealed) {
-      // Quien desconfía lo dice mientras se levanta el cubilete
       if (result.type === RESULTS.DOUBT) say(game, result.doubterId, 'desconfio');
-      playSfx('reveal');
       return;
     }
     finish(game, STING_DELAY_MS);
   });
 
   // Lo que suena cuando ya se sabe cómo terminó la ronda. La risa de la Cholada es solo para
-  // las Choladas: creer un Quispe no es equivocarse. Si el personaje que habla tiene grabada su
+  // las Choladas: creer un Quispe no es equivocarse. Quedar fuera o ganar la partida suenan
+  // solos, sin la risa de la Cholada ni voces. Si el personaje que habla tiene grabada su
   // frase, la frase reemplaza a la risa del remate y entra cuando termina lo demás.
   function finish(game, stingDelay) {
-    const cholada = game.round.result.type === RESULTS.CHOLADA;
-    if (cholada) playSfx('cholada');
     const { sound } = roundReaction(game);
+    const cholada = game.round.result.type === RESULTS.CHOLADA && !FINAL_STINGS.includes(sound);
+    if (cholada) playSfx('cholada');
     const voice = roundVoice(game);
-    const spoken = hasVoice(characterOf(game, voice.playerId), voice.key);
+    const spoken = voice != null && hasVoice(characterOf(game, voice.playerId), voice.key);
     const sting = sound ? stingFor(sound, laugh).filter((key) => !(spoken && LAUGHS.includes(key))) : [];
     if (sting.length) later(() => sting.forEach((key) => playSfx(key)), stingDelay);
     if (!spoken) return;
@@ -122,16 +121,18 @@ export function connectGameSounds(store) {
 
 // Las tres risas de la mesa
 const LAUGHS = ['laughMan', 'laughMan2', 'laughGranny'];
+// Desenlaces que suenan solos, sin nada más encima
+const FINAL_STINGS = ['win', 'eliminated'];
 
 // Qué efectos rematan cada desenlace. Perder la ronda se celebra con una risa, la pillen a
-// uno mintiendo o no. Al ganar la partida suenan dos a la vez: el remate con el brindis.
+// uno mintiendo o no. Al ganar la partida, el brindis.
 function stingFor(outcome, laugh) {
   switch (outcome) {
     case 'caught':
     case 'loss':
       return [laugh()];
     case 'win':
-      return ['win', 'cheer'];
+      return ['cheer'];
     default:
       return [outcome];
   }

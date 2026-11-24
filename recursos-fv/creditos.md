@@ -4,7 +4,7 @@
 
 | Archivo | Origen | Licencia |
 | --- | --- | --- |
-| `images/shared/logo.webp` | Logo de Flavio (`recursos-fv/graficos/Gran_Quispe_logo.png`), recortado con transparencia y escalado a 1100 px (script en `documentos/encargos/Fase 2 — Assets.md`) | Propio |
+| `images/shared/logo.webp` | Logo de Flavio (`recursos-fv/graficos/Gran_Quispe_logo.png`), recortado con contorno sólido y escalado a 1100 px (`scripts/recortar-logo.py`) | Propio |
 | `images/cantina/cantina-fondo.webp` | Generado con ChatGPT por Flavio (`recursos-fv/graficos/escenarios/Fondo1_Cantina_andina.png`), escalado a 2560 px | Propio |
 | `images/bar/bar-fondo.webp` | Generado por Flavio (`recursos-fv/graficos/escenarios/Bar Andino Bajo las Estrellas.png`), escalado a 2560 px | Propio |
 | `images/andino/andino-fondo.webp` | Generado por Flavio (`recursos-fv/graficos/escenarios/Valle andino al atardecer.png`), escalado a 2560 px | Propio |

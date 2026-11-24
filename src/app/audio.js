@@ -14,15 +14,13 @@ import { getPreference, setPreference } from './preferences.js';
 export const SFX = Object.freeze({
   shake: { file: 'sfx-agitar-cubilete', volume: 0.8 },
   thud: { file: 'sfx-golpe-cubilete', volume: 0.7 },
-  reveal: { file: 'sfx-destapar', volume: 0.9 },
   cholada: { file: 'sfx-cholada', volume: 1 },
   click: { file: 'sfx-boton', volume: 0.35 },
   start: { file: 'sfx-empezar', volume: 1 },
   believe: { file: 'sfx-creo', volume: 0.5 },
   eliminated: { file: 'sfx-eliminado', volume: 0.7 },
-  win: { file: 'sfx-gana-partida', volume: 0.8 },
-  // El brindis acompaña al remate de ganar: va por debajo
-  cheer: { file: 'sfx-cerveza-ganar', volume: 0.55 },
+  // El brindis es el remate de ganar la partida
+  cheer: { file: 'sfx-cerveza-ganar', volume: 0.8 },
   laughMan: { file: 'sfx-risa-hombre', volume: 0.8 },
   laughMan2: { file: 'sfx-risa-hombre-2', volume: 0.9 },
   laughGranny: { file: 'sfx-risa-abuela', volume: 1 },
@@ -156,7 +154,9 @@ function playElement({ file, volume }) {
 const VOICE_VOLUME = 1;
 const voiceFile = (characterIndex, key) => `voces/voz-${characterIndex + 1}-${key}`;
 
-export const hasVoice = (characterIndex, key) => characterIndex >= 0 && Boolean(urlOf(voiceFile(characterIndex, key)));
+// Con las voces apagadas en Configuración nadie habla, y los remates vuelven a ser las risas
+export const hasVoice = (characterIndex, key) =>
+  getPreference('voices') && characterIndex >= 0 && Boolean(urlOf(voiceFile(characterIndex, key)));
 
 export function playVoice(characterIndex, key) {
   if (hasVoice(characterIndex, key)) play({ file: voiceFile(characterIndex, key), volume: VOICE_VOLUME });

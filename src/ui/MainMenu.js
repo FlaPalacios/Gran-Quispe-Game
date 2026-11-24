@@ -11,7 +11,7 @@ export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, o
     h('div', { class: 'menu__corner' }, SoundToggle({ onChange: onRefresh })),
     // El logo ya viene recortado con transparencia; no se usa mix-blend-mode porque
     // el canvas de Phaser es otra capa de composición y el navegador no puede fundirse con él
-    h('img', { class: 'logo', src: logoUrl, alt: t('app.title'), width: '1100', height: '733' }),
+    h('img', { class: 'logo', src: logoUrl, alt: t('app.title'), width: '1100', height: '1061' }),
     h(
       'div',
       { class: 'menu__actions' },

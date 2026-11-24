@@ -6,6 +6,7 @@ import { loadSettings, saveSettings } from '../storage/localSave.js';
 const DEFAULTS = Object.freeze({
   muted: false, // todo el sonido
   music: true, // solo la música de fondo
+  voices: true, // los personajes dicen lo que se canta y sus frases
   silhouettes: false, // personajes de la mesa en sombra, sin detalle
   simpleKeypad: true, // cantar escribiendo el número, en vez de elegir de la lista completa
   variants: null, // variantes elegidas en Configuración; null usa las de por defecto
