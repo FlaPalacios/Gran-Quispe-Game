@@ -273,6 +273,20 @@ p {
   margin-bottom: 4vh;
 }
 
+/* Acerca del juego: un enlace discreto debajo de los botones, con alto táctil completo */
+.menu__link {
+  justify-self: center;
+  min-height: var(--tactil-min);
+  padding: 0 1rem;
+  border: 0;
+  background: none;
+  color: var(--color-texto);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 /* Cómo se juega y Configuración: secundarios, uno al lado del otro */
 .menu__more {
   display: grid;
@@ -484,6 +498,59 @@ p {
 .setup__note {
   color: var(--color-texto-suave);
   font-size: 0.9rem;
+}
+
+/* ---------- Acerca del juego ---------- */
+
+/* El banner con el logo encima, en el tercio izquierdo, que es el más oscuro del dibujo */
+.about__banner {
+  position: relative;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+  overflow: hidden;
+}
+
+.about__banner-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.about__banner-logo {
+  position: absolute;
+  left: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32%;
+  height: auto;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.6));
+}
+
+.about__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.about__links a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.about__credits {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.about__credits dt {
+  color: var(--color-texto);
+}
+
+.about__credits dd {
+  color: var(--color-texto-suave);
 }
 
 /* ---------- Cómo se juega ---------- */

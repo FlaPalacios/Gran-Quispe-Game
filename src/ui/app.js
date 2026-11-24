@@ -7,6 +7,7 @@ import { t } from '../i18n/index.js';
 import { loadGame } from '../storage/localSave.js';
 import { CallKeypad } from './CallKeypad.js';
 import { CallSheet, GameHud } from './GameHud.js';
+import { AboutScreen } from './AboutScreen.js';
 import { HowToPlay } from './HowToPlay.js';
 import { PlayIntro } from './PlayIntro.js';
 import { stopClock } from './PressureClock.js';
@@ -123,6 +124,8 @@ export function mountApp(root, store, stage) {
       );
     } else if (screen === 'howto') {
       root.replaceChildren(HowToPlay({ onBack: () => go('menu'), onPlay: startSetup }));
+    } else if (screen === 'about') {
+      root.replaceChildren(AboutScreen({ onBack: () => go('menu') }));
     } else if (screen === 'settings') {
       root.replaceChildren(RulesPanel({ draft, settings: true, onBack: () => go('menu') }));
     } else if (screen === 'setup') {
@@ -148,6 +151,7 @@ export function mountApp(root, store, stage) {
           onOnline: () => go('online'),
           onHowTo: () => go('howto'),
           onSettings: () => go('settings'),
+          onAbout: () => go('about'),
           onRefresh: render,
         }),
       );

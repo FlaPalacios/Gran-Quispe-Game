@@ -14,16 +14,12 @@ import { getPreference, setPreference } from './preferences.js';
 export const SFX = Object.freeze({
   shake: { file: 'sfx-agitar-cubilete', volume: 0.8 },
   thud: { file: 'sfx-golpe-cubilete', volume: 0.7 },
-  cholada: { file: 'sfx-cholada', volume: 1 },
   click: { file: 'sfx-boton', volume: 0.35 },
   start: { file: 'sfx-empezar', volume: 1 },
   believe: { file: 'sfx-creo', volume: 0.5 },
   eliminated: { file: 'sfx-eliminado', volume: 0.7 },
   // El brindis es el remate de ganar la partida
   cheer: { file: 'sfx-cerveza-ganar', volume: 0.8 },
-  laughMan: { file: 'sfx-risa-hombre', volume: 0.8 },
-  laughMan2: { file: 'sfx-risa-hombre-2', volume: 0.9 },
-  laughGranny: { file: 'sfx-risa-abuela', volume: 1 },
 });
 
 // Efectos y música en audio/; las voces de los personajes, en audio/voces/
@@ -150,12 +146,12 @@ function playElement({ file, volume }) {
 // Voces de los personajes (recursos-fv/scripts/cortar-voces.py): las jugadas cantadas ('31',
 // '110', 'quispe') y las frases ('creo', 'desconfio', 'pille', 'pierdo', 'cholada', 'gano',
 // 'fuera'). Archivo voces/voz-<personaje desde 1>-<clave>. Un personaje sin grabar, o una
-// frase que no grabó, simplemente no suena: por eso se puede preguntar antes con hasVoice.
+// frase que no grabó, simplemente no suena.
 const VOICE_VOLUME = 1;
 const voiceFile = (characterIndex, key) => `voces/voz-${characterIndex + 1}-${key}`;
 
-// Con las voces apagadas en Configuración nadie habla, y los remates vuelven a ser las risas
-export const hasVoice = (characterIndex, key) =>
+// Con las voces apagadas en Configuración nadie habla
+const hasVoice = (characterIndex, key) =>
   getPreference('voices') && characterIndex >= 0 && Boolean(urlOf(voiceFile(characterIndex, key)));
 
 export function playVoice(characterIndex, key) {

@@ -4,7 +4,7 @@ import { t } from '../i18n/index.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 
-export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, onSettings, onRefresh }) {
+export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, onSettings, onAbout, onRefresh }) {
   return h(
     'main',
     { class: 'screen menu' },
@@ -29,6 +29,7 @@ export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, o
         h('button', { class: 'btn btn--light btn--small', onClick: onHowTo }, t('menu.howto')),
         h('button', { class: 'btn btn--light btn--small', onClick: onSettings }, t('menu.settings')),
       ),
+      h('button', { class: 'menu__link', onClick: onAbout }, t('menu.about')),
     ),
   );
 }

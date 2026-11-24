@@ -14,6 +14,8 @@
 
 | `images/shared/menu-fondo-vertical.webp`, `menu-fondo-horizontal.webp` | Generados por Flavio (`recursos-fv/graficos/escenarios/menu-*.png`), pasados a WebP | Propio |
 | `images/shared/reaccion-*.webp` | Hoja de stickers generada por Flavio (`recursos-fv/graficos/reacciones/reacciones-hoja.png`), recortada con `recortar-reacciones.py` | Propio |
+| `images/shared/banner.webp` | Generado por Flavio (`recursos-fv/graficos/escenarios/banner - Dados andina bajo luz de cantina.png`), escalado a 1600 px | Propio |
+| `images/shared/icono.png`, `icono-apple.png` | El cubilete del logo, con `recortar-logo.py` | Propio |
 | `images/shared/mesa.webp` | Generada con ChatGPT por Flavio (`recursos-fv/graficos/objetos/Mesa de póker rústica de fieltro verde.png`), recortada | Propio |
 | `images/shared/cubilete-tapado/-inclinado/-volcado.webp` | Hoja de tres poses (`Tres vasos de cuero ilustrados.png`), recortadas a la misma escala y sobre su punto de apoyo | Propio |
 | `images/shared/dado-1..6.webp` | Cuadrícula de seis caras (`Colección de dados ilustrados 3D.png`), recortadas al mismo tamaño | Propio |
@@ -21,6 +23,8 @@
 Los PNG originales de los personajes, avatares y objetos están en `recursos-fv/graficos/png-originales/`. En `src/assets/` se usan en WebP: pesan 307 KB en vez de 2 MB, sin diferencia visible.
 
 ## Sonidos
+
+Quitados del juego por pedido de Flavio (los archivos están en `recursos-fv/papelera/sonidos-quitados/`): `sfx-destapar`, `sfx-gana-partida`, `sfx-cholada` y las tres risas. Sus filas siguen abajo como registro.
 
 Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 
@@ -63,6 +67,7 @@ publicar o aceptar donaciones.
 | 1 Alancito | `voz-1-*`: las 21 jugadas y las 7 frases |
 | 2 Doña Buricia | `voz-2-*`: las 21 jugadas y las 7 frases |
 | 3 Don Cucho | `voz-3-*`: las 21 jugadas y 6 frases (sin la de quedar fuera) |
+| 4 Don Dago | `voz-4-*`: las 21 jugadas y las 7 frases |
 
 ## Música
 

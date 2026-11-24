@@ -1,19 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyAction, createGame } from '../engine/rules.js';
 import { connectGameSounds } from './gameSounds.js';
-import { hasVoice, playSfx, playVoice } from './audio.js';
+import { playSfx, playVoice } from './audio.js';
 
-// El audio de verdad necesita navegador: aquí solo interesa qué se pide y cuándo.
-// Por defecto nadie tiene voz grabada; las pruebas de voces la encienden.
-vi.mock('./audio.js', () => ({
-  playSfx: vi.fn(),
-  playVoice: vi.fn(),
-  hasVoice: vi.fn(() => false),
-  preloadVoices: vi.fn(),
-  sfxDuration: vi.fn(() => null),
-}));
+// El audio de verdad necesita navegador: aquí solo interesa qué se pide y cuándo
+vi.mock('./audio.js', () => ({ playSfx: vi.fn(), playVoice: vi.fn(), preloadVoices: vi.fn() }));
 
-const LAUGHS = ['laughMan', 'laughMan2', 'laughGranny'];
 const dieValue = (d) => (d - 1) / 6;
 const rngFrom = (...values) => () => values.shift() ?? 0;
 
@@ -63,7 +55,6 @@ describe('connectGameSounds', () => {
   beforeEach(() => {
     playSfx.mockClear();
     playVoice.mockClear();
-    hasVoice.mockImplementation(() => false);
     store = fakeStore();
     disconnect = connectGameSounds(store);
   });
@@ -83,30 +74,36 @@ describe('connectGameSounds', () => {
     expect(sounds()).toEqual([]);
   });
 
-  it('el remate entra recién cuando termina el destape', () => {
+  it('al terminar el destape no suena ninguna risa: habla quien pilló al mentiroso', () => {
     const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
     const over = act(called, 'DOUBT', 'beto');
     store.emit({ game: called });
     store.emit({ game: over, revealing: true });
     playSfx.mockClear();
+    playVoice.mockClear();
     store.emit({ game: over, revealing: false });
-    // Pillaron mintiendo a ana: una risa al azar, y nada más
-    expect(sounds()).toHaveLength(1);
-    expect(LAUGHS).toContain(sounds()[0]);
+    expect(sounds()).toEqual([]);
+    expect(voices()).toEqual([[1, 'pille']]);
   });
 
-  it('una Cholada sin destape suena al momento, sin esperar', () => {
+  it('una Cholada no tiene efecto: la dice el personaje, y se cancela si la partida sigue', () => {
     vi.useFakeTimers();
     try {
       let s = act(roll(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 62);
       store.emit({ game: s });
-      playSfx.mockClear();
       s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31); // más bajo
+      playSfx.mockClear();
+      playVoice.mockClear();
       store.emit({ game: s });
-      // La Cholada es su propio remate: no espera nada ni suma otro sonido
-      expect(sounds()).toEqual(['cholada']);
+      vi.advanceTimersByTime(500);
+      expect(sounds()).toEqual([]);
+      expect(voices()).toEqual([[1, 'cholada']]);
+
+      playVoice.mockClear();
+      store.emit({ game: s });
+      store.emit({ game: act(s, 'NEXT_ROUND') });
       vi.advanceTimersByTime(1000);
-      expect(sounds()).toEqual(['cholada']);
+      expect(voices()).toEqual([]);
     } finally {
       vi.useRealTimers();
     }
@@ -115,54 +112,35 @@ describe('connectGameSounds', () => {
   it('si la Cholada deja a alguien fuera, suena solo el de quedar fuera', () => {
     vi.useFakeTimers();
     try {
-      const start = createGame(
-        { config: { mode: 'lives', lives: 1 }, players: PLAYERS },
-        { rng: rngFrom(0) },
-      );
+      const start = createGame({ config: { mode: 'lives', lives: 1 }, players: PLAYERS }, { rng: rngFrom(0) });
       let s = act(roll(start, 'ana', [4, 2]), 'CALL', 'ana', 62);
       store.emit({ game: s });
       playSfx.mockClear();
+      playVoice.mockClear();
       s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
       store.emit({ game: s });
-      expect(sounds()).toEqual([]);
       vi.advanceTimersByTime(500);
       expect(sounds()).toEqual(['eliminated']);
+      expect(voices().filter(([, key]) => key !== '62' && key !== 'creo')).toEqual([]);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('creer un Quispe no suena a Cholada: solo la risa', () => {
+  it('creer un Quispe no suena a Cholada: lo lamenta quien creyó', () => {
     vi.useFakeTimers();
     try {
       const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 21);
       store.emit({ game: called });
       playSfx.mockClear();
+      playVoice.mockClear();
       store.emit({ game: act(called, 'BELIEVE', 'beto') });
-      expect(sounds()).toEqual([]);
       vi.advanceTimersByTime(500);
-      expect(sounds()).toHaveLength(1);
-      expect(LAUGHS).toContain(sounds()[0]);
+      expect(sounds()).toEqual([]);
+      expect(voices()).toEqual([[1, 'pierdo']]);
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it('las risas se van turnando: dos derrotas seguidas no repiten', () => {
-    const perder = (dice, call) => {
-      const called = act(roll(newGame(), 'ana', dice), 'CALL', 'ana', call);
-      const over = act(called, 'DOUBT', 'beto');
-      store.emit({ game: called });
-      store.emit({ game: over, revealing: true });
-      store.emit({ game: over, revealing: false });
-    };
-    playSfx.mockClear();
-    perder([3, 1], 65); // pillan a ana mintiendo
-    perder([6, 5], 65); // ana cantó lo que tenía: pierde beto
-    // Entre medias suena el destape: aquí solo interesan las risas
-    const risas = sounds().filter((key) => LAUGHS.includes(key));
-    expect(risas).toHaveLength(2);
-    expect(risas[1]).not.toBe(risas[0]);
   });
 
   it('al ganar la partida suena solo el brindis', () => {
@@ -194,8 +172,6 @@ describe('connectGameSounds', () => {
   });
 
   describe('voces de los personajes', () => {
-    beforeEach(() => hasVoice.mockImplementation(() => true));
-
     it('al cantar, el personaje dice la jugada; el Quispe, con su nombre', () => {
       const rolled = roll(newGame(), 'ana', [4, 2]);
       store.emit({ game: rolled });
@@ -220,47 +196,6 @@ describe('connectGameSounds', () => {
         [1, 'creo'],
         [1, 'desconfio'],
       ]);
-    });
-
-    it('al pillar al mentiroso habla quien desconfió, y su frase reemplaza la risa', () => {
-      const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
-      const over = act(called, 'DOUBT', 'beto');
-      store.emit({ game: called });
-      store.emit({ game: over, revealing: true });
-      playSfx.mockClear();
-      playVoice.mockClear();
-      store.emit({ game: over, revealing: false });
-      expect(sounds()).toEqual([]);
-      expect(voices()).toEqual([[1, 'pille']]);
-    });
-
-    it('sin la frase grabada, queda la risa de siempre', () => {
-      hasVoice.mockImplementation((character, key) => key !== 'pille');
-      const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
-      const over = act(called, 'DOUBT', 'beto');
-      store.emit({ game: called });
-      store.emit({ game: over, revealing: true });
-      playSfx.mockClear();
-      store.emit({ game: over, revealing: false });
-      expect(LAUGHS).toContain(sounds()[0]);
-    });
-
-    it('la frase de la Cholada espera a la risa de la Cholada, y se cancela si la partida sigue', () => {
-      vi.useFakeTimers();
-      try {
-        let s = act(roll(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 62);
-        store.emit({ game: s });
-        s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
-        // El mock no sabe cuánto dura la risa: se espera el tope
-        playVoice.mockClear();
-        store.emit({ game: s });
-        expect(voices()).toEqual([]);
-        store.emit({ game: act(s, 'NEXT_ROUND') });
-        vi.advanceTimersByTime(3000);
-        expect(voices()).toEqual([]);
-      } finally {
-        vi.useRealTimers();
-      }
     });
   });
 });

@@ -8,7 +8,7 @@ src/assets/audio/voces/voz-<personaje>-<clave>, que es lo que busca src/app/audi
 Se corre desde la raíz del proyecto:  python recursos-fv/scripts/cortar-voces.py
 Necesita ffmpeg y  pip install faster-whisper  (usa el modelo "medium", ~1,5 GB la primera vez).
 
-Para sumar a un personaje (por ejemplo, Don Dago como 4) se agregan sus dos grabaciones a
+Para sumar a un personaje (el 5 en adelante) se agregan sus dos grabaciones a
 JOBS. En las frases hay que decir en qué palabra empieza cada una: se ve con la transcripción
 que imprime el script (cada palabra con su número).
 """
@@ -28,6 +28,7 @@ JOBS = [
     ('1 Alancito - jugadas.mp3', 1, CALLS, None),
     ('2 Doña Buricia - jugadas.mp3', 2, CALLS, None),
     ('3 Don Cucho - jugadas.mp3', 3, CALLS, None),
+    ('4 Don Dago - jugadas.mp3', 4, CALLS, None),
     # "Ya, te creo, causa." / "¡Mentira! ¡Destapa!" / "Te descubrí, chato." / "No, causa." /
     # "No pe, me he quinceado." / "¡Así se gana, sonsos!" / "Ya fui, mano."
     ('1 Alancito - frases.mp3', 1, PHRASES, [0, 4, 6, 9, 11, 16, 20]),
@@ -39,6 +40,9 @@ JOBS = [
     # "Vas a pagar pato." / "Ya pues, como en la chamba." / "Necesito vacaciones." /
     # "Por fin algo me sale bien."
     ('3 Don Cucho - frases.mp3', 3, PHRASES[:6], [0, 6, 12, 16, 22, 24]),
+    # "Te creo, compadre." / "Destapa nomás, oe." / "Te has quinceado." / "Me quinceé, carajo." /
+    # "Me bajé en otro paradero." / "¡Salud, pe!" / "Me voy a la carretera, zafa nomás."
+    ('4 Don Dago - frases.mp3', 4, PHRASES, [0, 3, 6, 9, 12, 17, 18]),
 ]
 
 
@@ -74,8 +78,8 @@ def main():
             lo = 0 if i == 0 else (spans[i - 1][1] + start) / 2
             hi = total if i == len(spans) - 1 else (end + spans[i + 1][0]) / 2
             filters = (f'atrim={lo:.3f}:{hi:.3f},asetpts=PTS-STARTPTS,volume={gain:.2f}dB,'
-                       'silenceremove=start_periods=1:start_threshold=-45dB,areverse,'
-                       'silenceremove=start_periods=1:start_threshold=-45dB,afade=t=in:d=0.03,areverse,'
+                       'silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.06,areverse,'
+                       'silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.06,afade=t=in:d=0.03,areverse,'
                        'apad=pad_dur=0.04')
             base = os.path.join(TARGET, f'voz-{number}-{key}')
             for ext, codec in (('ogg', ['libopus', '-b:a', '40k']), ('mp3', ['libmp3lame', '-b:a', '64k'])):

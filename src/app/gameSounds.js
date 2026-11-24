@@ -2,7 +2,7 @@
 // Está aquí y no en los componentes para tener en un solo lugar qué suena y cuándo.
 import { QUISPE } from '../engine/dice.js';
 import { PHASES, RESULTS, getLastCall } from '../engine/rules.js';
-import { hasVoice, playSfx, playVoice, preloadVoices, sfxDuration } from './audio.js';
+import { playSfx, playVoice, preloadVoices } from './audio.js';
 import { characterIndexFor } from './characters.js';
 import { roundReaction, roundVoice } from './reaction.js';
 
@@ -10,9 +10,10 @@ import { roundReaction, roundVoice } from './reaction.js';
 const SHAKE_SOUND_EVERY_MS = 550;
 // El remate del final de ronda entra cuando el cubilete ya se destapó, no encima del golpe
 const STING_DELAY_MS = 420;
-// La frase del personaje entra cuando termina el remate, pero sin esperar más que esto:
-// el de ganar dura más de 3 s y la frase llegaría tarde
-const VOICE_WAIT_MAX_MS = 1200;
+// Los únicos efectos que cierran una ronda: quedar fuera y ganar la partida (el brindis).
+// Perder una ronda o hacer Cholada no suena a nada: lo dice la voz del personaje. Las risas
+// se quitaron (pedido de Flavio, 2026-11-24).
+const STINGS = { eliminated: 'eliminated', win: 'cheer' };
 
 // El personaje de cada jugador, el mismo que muestran la tarjeta y la escena
 const characterOf = (game, playerId) => characterIndexFor(game.players.findIndex((p) => p.id === playerId));
@@ -30,10 +31,6 @@ export function connectGameSounds(store) {
     pending = [];
   };
   const say = (game, playerId, key) => playVoice(characterOf(game, playerId), key);
-  // Las tres risas se turnan, en vez de salir al azar, para que no toque dos veces seguidas
-  // la misma. El turno es de esta partida: empieza de nuevo con cada conexión.
-  let nextLaugh = 0;
-  const laugh = () => LAUGHS[nextLaugh++ % LAUGHS.length];
 
   const unsubscribeSignals = store.onSignal((name) => {
     if (name === 'gameStart') {
@@ -95,21 +92,15 @@ export function connectGameSounds(store) {
     finish(game, STING_DELAY_MS);
   });
 
-  // Lo que suena cuando ya se sabe cómo terminó la ronda. La risa de la Cholada es solo para
-  // las Choladas: creer un Quispe no es equivocarse. Quedar fuera o ganar la partida suenan
-  // solos, sin la risa de la Cholada ni voces. Si el personaje que habla tiene grabada su
-  // frase, la frase reemplaza a la risa del remate y entra cuando termina lo demás.
-  function finish(game, stingDelay) {
-    const { sound } = roundReaction(game);
-    const cholada = game.round.result.type === RESULTS.CHOLADA && !FINAL_STINGS.includes(sound);
-    if (cholada) playSfx('cholada');
+  // Lo que suena cuando ya se sabe cómo terminó la ronda: el efecto de quedar fuera o de
+  // ganar, o si no, la frase del personaje que habla (roundVoice nunca coincide con ellos)
+  function finish(game, delay) {
+    const sting = STINGS[roundReaction(game).sound];
     const voice = roundVoice(game);
-    const spoken = voice != null && hasVoice(characterOf(game, voice.playerId), voice.key);
-    const sting = sound ? stingFor(sound, laugh).filter((key) => !(spoken && LAUGHS.includes(key))) : [];
-    if (sting.length) later(() => sting.forEach((key) => playSfx(key)), stingDelay);
-    if (!spoken) return;
-    const longest = (keys) => Math.max(0, ...keys.map((key) => Math.min(sfxDuration(key) ?? VOICE_WAIT_MAX_MS, VOICE_WAIT_MAX_MS)));
-    later(() => say(game, voice.playerId, voice.key), Math.max(cholada ? longest(['cholada']) : 0, sting.length ? stingDelay + longest(sting) : 0));
+    later(() => {
+      if (sting) playSfx(sting);
+      if (voice) say(game, voice.playerId, voice.key);
+    }, delay);
   }
 
   return () => {
@@ -117,23 +108,4 @@ export function connectGameSounds(store) {
     unsubscribeSignals();
     unsubscribe();
   };
-}
-
-// Las tres risas de la mesa
-const LAUGHS = ['laughMan', 'laughMan2', 'laughGranny'];
-// Desenlaces que suenan solos, sin nada más encima
-const FINAL_STINGS = ['win', 'eliminated'];
-
-// Qué efectos rematan cada desenlace. Perder la ronda se celebra con una risa, la pillen a
-// uno mintiendo o no. Al ganar la partida, el brindis.
-function stingFor(outcome, laugh) {
-  switch (outcome) {
-    case 'caught':
-    case 'loss':
-      return [laugh()];
-    case 'win':
-      return ['cheer'];
-    default:
-      return [outcome];
-  }
 }
