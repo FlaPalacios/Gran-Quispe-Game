@@ -57,6 +57,7 @@ export function GameHud({
     h(
       'section',
       { class: 'zona hud__play' },
+      presenceNotice(snapshot),
       turnCard(snapshot, current, store, !callSheetOpen),
       actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }),
     ),
@@ -261,6 +262,17 @@ export function CallSheet({ snapshot, store, onPick, onCancel }) {
       h('div', { class: 'call-grid' }, numbers.map((v) => option(v)), option(QUISPE, ' call-option--quispe')),
       h('button', { class: 'btn btn--light', onClick: onCancel }, t('game.cancel')),
     ),
+  );
+}
+
+// En línea: quién se desconectó, y si ya juega un bot por él
+function presenceNotice({ presence, viewerId }) {
+  const gone = presence?.filter((p) => !p.connected && p.id !== viewerId) ?? [];
+  if (!gone.length) return null;
+  return h(
+    'div',
+    { class: 'presence', role: 'status' },
+    gone.map((p) => h('p', {}, t(p.autopilot ? 'online.gone.bot' : 'online.gone.wait', { name: p.name }))),
   );
 }
 

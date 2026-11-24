@@ -82,8 +82,12 @@ export function createRooms({ send, rng = secureRandom }) {
     const { game, turnStartedAt } = room.store.get();
     if (!game) return;
     const elapsed = turnStartedAt == null ? null : Date.now() - turnStartedAt;
+    // Quién de las personas está conectado, y por quién juega el suplente
+    const presence = room.seats
+      .filter((s) => !s.isBot)
+      .map(({ id, name, connected, autopilot }) => ({ id, name, connected, autopilot: Boolean(autopilot) }));
     for (const seat of room.seats) {
-      if (seat.socketId) send(seat.socketId, 'state', { game: viewFor(game, seat.id), you: seat.id, elapsed });
+      if (seat.socketId) send(seat.socketId, 'state', { game: viewFor(game, seat.id), you: seat.id, elapsed, presence });
     }
   }
 
@@ -118,6 +122,7 @@ export function createRooms({ send, rng = secureRandom }) {
       // Se le guarda el asiento un rato; si no vuelve, juega un bot por él
       const takeOver = () => {
         seat.autopilot = true;
+        broadcastState(room);
         autopilot(room);
       };
       if (quit) takeOver();
@@ -125,6 +130,7 @@ export function createRooms({ send, rng = secureRandom }) {
     }
     if (!room.seats.some((s) => s.socketId)) room.emptyTimer = setTimeout(safe(() => destroy(room)), EMPTY_ROOM_MS);
     broadcastLobby(room);
+    broadcastState(room); // para que los demás vean que se desconectó
   }
 
   // Juega por quien se desconectó, cuando le toca y ya se le acabó el tiempo de espera
@@ -236,7 +242,19 @@ export function createRooms({ send, rng = secureRandom }) {
     join(socketId, { code, name } = {}) {
       const room = rooms.get(String(code ?? '').toUpperCase());
       if (!room) throw new RoomError('NO_ROOM');
-      if (room.store.get().game) throw new RoomError('STARTED');
+      if (room.store.get().game) {
+        // Empezada la partida, solo vuelve quien ya jugaba en ella y salió: con su mismo nombre.
+        // shortcut: entre amigos basta el nombre; para una sala pública haría falta algo más.
+        const wanted = cleanName(name).toLowerCase();
+        const back = room.seats.find((s) => !s.isBot && !s.socketId && wanted && s.name.toLowerCase() === wanted);
+        if (!back) throw new RoomError('STARTED');
+        release(socketId);
+        back.token = newToken();
+        const result = sit(room, back, socketId);
+        broadcastLobby(room);
+        broadcastState(room);
+        return result;
+      }
       // El asiento de quien creó la sala es suyo aunque se le corte un momento la conexión
       const seat = room.seats.find((s) => !s.isBot && !s.socketId && s.id !== room.hostId);
       if (!seat) throw new RoomError('FULL');

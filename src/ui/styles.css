@@ -9,6 +9,7 @@
   --color-retablo-rojo: #c23a2b;
   --color-retablo-azul: #2f5d9e;
   --color-retablo-dorado: #f2c230;
+  --color-amarillo-cantar: #f2d94b; /* "lo que salió" en el teclado: tiene que saltar a la vista */
   --color-letra-pendiente: #4a3a2f;
   --color-papel: #ffffff; /* fondo de campos sobre tarjetas crema (HUD de la mesa) */
 
@@ -411,6 +412,16 @@ p {
 
 .online__seat.is-free {
   color: var(--color-texto-suave);
+}
+
+/* Aviso de que alguien se desconectó, arriba del panel de turno */
+.presence {
+  padding: 0.4rem 0.75rem;
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: 12px;
+  background: var(--color-panel);
+  color: var(--color-amarillo-cantar);
+  font-size: 0.9rem;
 }
 
 /* Un asiento: el nombre y quién lo juega (persona o bot) */
@@ -1000,6 +1011,12 @@ p {
 .keypad__quispe {
   color: var(--color-texto);
   background: var(--color-campo);
+}
+
+/* Cantar lo que salió: negro con letra amarilla, para que se reconozca de un vistazo */
+.keypad__actual {
+  color: var(--color-amarillo-cantar);
+  background: var(--color-borde);
 }
 
 .keypad__quispe.is-wide {

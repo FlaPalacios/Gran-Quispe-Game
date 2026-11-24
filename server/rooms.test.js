@@ -164,4 +164,15 @@ describe('salas online', () => {
     expect(() => rooms.create('s', { setup: long })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
     expect(() => rooms.create('s', {})).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
   });
+
+  it('quien salió de una partida vuelve con el código y su nombre; alguien nuevo no entra', () => {
+    const { inbox, rooms, host } = openRoom();
+    rooms.start('s-ana');
+    rooms.quit('s-beto');
+    expect(inbox['s-ana'].state.presence).toContainEqual({ id: 'p2', name: 'Beto', connected: false, autopilot: true });
+    expect(() => rooms.join('s-x', { code: host.code, name: 'Cata' })).toThrow(expect.objectContaining({ code: 'STARTED' }));
+    const back = rooms.join('s-beto-2', { code: host.code, name: 'beto' });
+    expect(back.playerId).toBe('p2');
+    expect(inbox['s-ana'].state.presence).toContainEqual({ id: 'p2', name: 'Beto', connected: true, autopilot: false });
+  });
 });

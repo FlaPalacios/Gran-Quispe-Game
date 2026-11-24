@@ -36,7 +36,9 @@ export function createGameStore({
   const listeners = new Set();
   const signalListeners = new Set();
 
-  const snapshot = () => ({ game, viewerId, turnStartedAt, revealing, playersBefore, online: Boolean(remote) });
+  // presence (solo en línea): quién de las personas está conectado y por quién juega un bot
+  let presence = null;
+  const snapshot = () => ({ game, viewerId, turnStartedAt, revealing, playersBefore, presence, online: Boolean(remote) });
   const notify = () => {
     skipLonePass();
     listeners.forEach((fn) => fn(snapshot()));
@@ -127,10 +129,11 @@ export function createGameStore({
     // En línea: el estado que manda el servidor, ya sin lo que este jugador no puede ver.
     // `you` es su asiento; `elapsed`, cuánto lleva su turno (para el reloj de presión), en
     // vez de una hora, porque los relojes del servidor y del celular no coinciden.
-    receive(next, { you, elapsed = null } = {}) {
+    receive(next, { you, elapsed = null, presence: seats = null } = {}) {
       const before = game;
       game = next;
       viewerId = you;
+      presence = seats;
       turnStartedAt = elapsed == null ? null : now() - elapsed;
       followReveal(before);
       notify();
@@ -142,6 +145,7 @@ export function createGameStore({
     // Entra (con la conexión al servidor) o sale (con null) del modo online
     useRemote(next) {
       remote = next;
+      presence = null;
       game = null;
       viewerId = null;
       turnStartedAt = null;

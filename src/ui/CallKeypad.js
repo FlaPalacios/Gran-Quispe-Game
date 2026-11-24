@@ -135,7 +135,7 @@ export function CallKeypad({ snapshot, store, onPick, onCancel }) {
         showShortcut &&
           h(
             'button',
-            { class: 'btn btn--light keypad__actual', onClick: chooseActual, 'aria-label': t('game.keypad.actual', { call: actual }) },
+            { class: 'btn keypad__actual', onClick: chooseActual, 'aria-label': t('game.keypad.actual', { call: actual }) },
             String(actual),
           ),
         callButton,

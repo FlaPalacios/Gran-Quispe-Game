@@ -55,6 +55,7 @@ Cada pantalla tiene dos distribuciones: celular (una columna, como el wireframe)
 | Marco retablo, franja 1 (rojo quemado) | `--color-retablo-rojo` | #c23a2b | `0xc23a2b` |
 | Marco retablo, franja 2 (azul colonial) | `--color-retablo-azul` | #2f5d9e | `0x2f5d9e` |
 | Marco retablo, detalle (dorado opaco) | `--color-retablo-dorado` | #f2c230 | `0xf2c230` |
+| Botón "lo que salió" del teclado (amarillo sobre negro) | `--color-amarillo-cantar` | #f2d94b | — |
 | Letras QUISPE pendientes (gris oscuro) | `--color-letra-pendiente` | #4a3a2f | `0x4a3a2f` |
 | Campos sobre tarjetas crema del HUD (blanco) | `--color-papel` | #ffffff | — |
 

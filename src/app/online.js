@@ -2,6 +2,7 @@
 // las acciones al servidor y recibe de él el estado de la partida, solo con lo que este
 // celular puede ver.
 import { io } from 'socket.io-client';
+import { t } from '../i18n/index.js';
 import { clearOnlineSeat, loadOnlineSeat, saveOnlineSeat } from '../storage/localSave.js';
 
 // Si el servidor no contesta en este tiempo, no está corriendo o no se llega a él
@@ -16,7 +17,7 @@ export function createOnline(store, { onLobby, onLost }) {
     if (socket) return socket;
     socket = io();
     socket.on('lobby', onLobby);
-    socket.on('state', ({ game, you, elapsed }) => store.receive(game, { you, elapsed }));
+    socket.on('state', ({ game, you, elapsed, presence = [] }) => store.receive(withBotNames(game, presence), { you, elapsed, presence }));
     socket.on('signal', (name) => store.receiveSignal(name));
     // Este asiento se abrió en otro celular o pestaña
     socket.on('lost', (code) => lose(code));
@@ -45,17 +46,27 @@ export function createOnline(store, { onLobby, onLost }) {
     });
   }
 
+  // Por quien se desconectó juega un bot: se nota en su nombre, en las tarjetas y en los paneles
+  function withBotNames(game, presence) {
+    const auto = new Set(presence.filter((p) => p.autopilot).map((p) => p.id));
+    if (!auto.size) return game;
+    return { ...game, players: game.players.map((p) => (auto.has(p.id) ? { ...p, name: t('online.botName', { name: p.name }) } : p)) };
+  }
+
   function remember({ code, playerId, token }) {
     seat = { code, playerId, token };
     saveOnlineSeat(seat);
     return seat;
   }
 
-  function disconnect() {
+  // `keepSeat`: salió a propósito y puede volver con el código; el asiento se guarda marcado
+  // para no reentrar solo al abrir el juego
+  function disconnect({ keepSeat = false } = {}) {
     socket?.disconnect();
     socket = null;
+    if (keepSeat && seat) saveOnlineSeat({ ...seat, left: true });
+    else clearOnlineSeat();
     seat = null;
-    clearOnlineSeat();
     store.useRemote(null);
   }
 
@@ -66,20 +77,33 @@ export function createOnline(store, { onLobby, onLost }) {
 
   return {
     create: (setup, name) => request('create', { setup, name }).then(remember),
-    join: (code, name) => request('join', { code, name }).then(remember),
+    // Si es la sala de la que salió este mismo celular, vuelve a su asiento con el token; si
+    // no, entra como nuevo (o, con la partida empezada, recupera el asiento con su nombre)
+    join(code, name) {
+      const saved = loadOnlineSeat();
+      if (saved?.code === code.toUpperCase()) {
+        seat = saved;
+        return request('rejoin', saved)
+          .then(remember)
+          .catch(() => request('join', { code, name }).then(remember));
+      }
+      return request('join', { code, name }).then(remember);
+    },
     // Empezar, o volver a jugar cuando terminó la partida (solo quien creó la sala)
     start: () => request('start'),
 
     leave() {
       socket?.emit('leave');
-      disconnect();
+      disconnect({ keepSeat: true });
     },
 
     // Al abrir el juego: si había un asiento guardado, se intenta volver a esa sala
     resume() {
-      seat = loadOnlineSeat();
-      if (seat) connect();
-      return Boolean(seat);
+      const saved = loadOnlineSeat();
+      if (!saved || saved.left) return false;
+      seat = saved;
+      connect();
+      return true;
     },
 
     get playerId() {
