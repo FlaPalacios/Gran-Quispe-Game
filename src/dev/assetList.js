@@ -1,5 +1,5 @@
 // Assets esperados para la Fase 2 (cantina). Fuente de la galería de desarrollo (galeria.html)
-// y de recursos-fv/Fase 2 — Assets.md. Las medidas siguen el skill identidad-visual.
+// y de recursos-fv/documentos/encargos/Fase 2 — Assets.md. Las medidas siguen el skill identidad-visual.
 
 export const EXPECTED_ASSETS = [
   {
@@ -8,7 +8,7 @@ export const EXPECTED_ASSETS = [
       {
         path: 'images/shared/logo.webp',
         size: '1100 x 733 px',
-        note: 'Con transparencia, generado desde el original (script en recursos-fv/Fase 2 — Assets.md)',
+        note: 'Con transparencia, generado desde el original (script en recursos-fv/documentos/encargos/Fase 2 — Assets.md)',
       },
     ],
   },

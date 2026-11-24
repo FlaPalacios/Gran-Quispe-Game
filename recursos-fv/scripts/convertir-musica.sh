@@ -1,12 +1,12 @@
 #!/bin/sh
-# Lleva la música de recursos-fv/Musica/ a src/assets/audio/, en OGG (Opus) y MP3 (Safari no lee
+# Lleva la música de recursos-fv/sonidos/musica/ a src/assets/audio/, en OGG (Opus) y MP3 (Safari no lee
 # OGG). Recorta el silencio del principio y del final para que el bucle no tenga hueco: los
 # cortes (inicio y fin, en segundos) salen de
 #   ffmpeg -i "<archivo>" -af silencedetect=n=-45dB:d=0.3 -f null -
 # Se corre desde la raíz del proyecto:  sh recursos-fv/scripts/convertir-musica.sh
 # Necesita ffmpeg.
 set -e
-M=recursos-fv/Musica
+M=recursos-fv/sonidos/musica
 A=src/assets/audio
 
 convert() { # origen inicio fin destino

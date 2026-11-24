@@ -89,7 +89,7 @@ Decidido el 2026-10-21 (opción A): **fondo pintado y personajes planos encima**
 - Fondos de escenario: ilustración pintada, con luz cálida, sombras y textura. Pueden llevar letreros y marcas locales (le dan el toque cusqueño).
 - Personajes, UI, cubilete y elementos sueltos: planos, sin degradados, con luz ámbar para combinar con el fondo.
 - Contornos negros gruesos de 3-4 px (en Phaser, `setStrokeStyle(4, 0x000000)`; en CSS, `var(--borde-grueso)`).
-- Personajes: gente cotidiana del Cusco con personalidad (el chibolo hincha del Cienciano, la abuela con lentes, el oficinista, el chofer de bus), **solo en el escenario de cantina**. Prompt en `recursos-fv/Fase 2 — Assets.md`.
+- Personajes: gente cotidiana del Cusco con personalidad (el chibolo hincha del Cienciano, la abuela con lentes, el oficinista, el chofer de bus), **solo en el escenario de cantina**. Prompt en `recursos-fv/documentos/encargos/Fase 2 — Assets.md`.
 - Bar universitario y paisaje andino: solo ambientación, sin personajes.
 
 ## Tamaños de sprite
@@ -123,4 +123,4 @@ las usa para colocar todo sobre el paño. Si se reexporta alguna, hay que correr
 
 ## El logo
 
-El original (`recursos-fv/Gran_Quispe_logo.png`) viene sobre fondo negro con halo. La versión del juego se genera con transparencia real a partir del brillo de cada píxel, no con `mix-blend-mode`: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundirse con él. El script está en `recursos-fv/Fase 2 — Assets.md`.
+El original (`recursos-fv/graficos/Gran_Quispe_logo.png`) viene sobre fondo negro con halo. La versión del juego se genera con transparencia real a partir del brillo de cada píxel, no con `mix-blend-mode`: el canvas de Phaser es una capa de composición aparte y el navegador no puede fundirse con él. El script está en `recursos-fv/documentos/encargos/Fase 2 — Assets.md`.

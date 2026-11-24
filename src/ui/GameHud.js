@@ -8,6 +8,7 @@ import { LETTERS } from '../engine/modes.js';
 import { CHOLADA_REASONS, PHASES, RESULTS, canSpy, getLastCall, getSpiedDie, isFinalDuel } from '../engine/rules.js';
 import { hasText, t } from '../i18n/index.js';
 import { PressureClock } from './PressureClock.js';
+import { ReactionPicker } from './Reactions.js';
 import { RollButton } from './RollButton.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
@@ -22,6 +23,7 @@ export function GameHud({
   foldPlayers,
   playersOpen,
   onTogglePlayers,
+  reactions,
   onExit,
   onOpenCalls,
   onPlayAgain,
@@ -44,6 +46,8 @@ export function GameHud({
       h(
         'span',
         { class: 'hud__top-actions' },
+        // Solo en línea: en un mismo celular no hay a quién mandarle un sticker
+        reactions && ReactionPicker(reactions),
         SoundToggle({ onChange: onRefresh }),
         h('button', { class: 'btn btn--light btn--small', onClick: onExit }, t('game.exit')),
       ),

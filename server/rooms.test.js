@@ -165,6 +165,20 @@ describe('salas online', () => {
     expect(() => rooms.create('s', {})).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
   });
 
+  it('las reacciones llegan a toda la sala, sin inventadas ni ráfagas', () => {
+    const { inbox, rooms } = openRoom();
+    rooms.start('s-ana');
+    rooms.react('s-beto', { reaction: 'salud' });
+    expect(inbox['s-ana'].reaction).toEqual({ playerId: 'p2', reaction: 'salud' });
+    expect(inbox['s-beto'].reaction).toEqual({ playerId: 'p2', reaction: 'salud' });
+    rooms.react('s-beto', { reaction: 'risa' }); // muy seguida: no se reenvía
+    expect(inbox['s-ana'].reaction.reaction).toBe('salud');
+    vi.advanceTimersByTime(2000);
+    rooms.react('s-beto', { reaction: 'risa' });
+    expect(inbox['s-ana'].reaction.reaction).toBe('risa');
+    expect(() => rooms.react('s-beto', { reaction: 'toString' })).toThrow(expect.objectContaining({ code: 'BAD_REACTION' }));
+  });
+
   it('quien salió de una partida vuelve con el código y su nombre; alguien nuevo no entra', () => {
     const { inbox, rooms, host } = openRoom();
     rooms.start('s-ana');

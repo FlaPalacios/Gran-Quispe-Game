@@ -172,5 +172,11 @@
   "howto.believedQuispe": "Creer un Quispe también te hace perder: ya no hay nada más alto que cantar.",
   "howto.win": "Quién gana",
   "howto.win.text": "Cada ronda perdida te suma una letra de Q-U-I-S-P-E. Completas la palabra y quedas fuera. Gana el último que queda.",
-  "howto.play": "¡A jugar!"
+  "howto.play": "¡A jugar!",
+  "reaction.open": "Mandar una reacción",
+  "reaction.risa": "Risa",
+  "reaction.mentiroso": "¡Mentiroso!",
+  "reaction.salud": "¡Salud!",
+  "reaction.sorpresa": "¡Sorpresa!",
+  "online.error.BAD_REACTION": "Esa reacción no existe."
 }

@@ -22,6 +22,10 @@ const AUTOPILOT_MS = 1500;
 const EMPTY_ROOM_MS = 10 * 60_000;
 // Las sacudidas se reparten a todos: más seguidas que esto no se reenvían
 const SHAKE_MIN_MS = 150;
+// Reacciones rápidas: las que existen (los stickers de src/assets/images/shared/reaccion-*.webp)
+// y cada cuánto puede mandar una cada asiento, para que nadie llene la pantalla de los demás
+export const REACTIONS = Object.freeze(['risa', 'mentiroso', 'salud', 'sorpresa']);
+const REACT_MIN_MS = 2000;
 
 // En el servidor los dados salen de un azar que no se puede predecir mirando tiradas
 // (48 bits al azar llevados a [0, 1), como Math.random)
@@ -320,6 +324,16 @@ export function createRooms({ send, rng = secureRandom }) {
       if (Date.now() - room.lastShakeAt < SHAKE_MIN_MS) return;
       room.lastShakeAt = Date.now();
       room.store.signal('cupShake');
+    },
+
+    // Un sticker para toda la sala, también para quien lo mandó (así sabe que llegó)
+    react(socketId, { reaction }) {
+      if (!REACTIONS.includes(reaction)) throw new RoomError('BAD_REACTION');
+      const room = roomOf(socketId);
+      const seat = seatOf(room, socketId);
+      if (!seat || Date.now() - (seat.lastReactAt ?? 0) < REACT_MIN_MS) return;
+      seat.lastReactAt = Date.now();
+      for (const { socketId: to } of room.seats) if (to) send(to, 'reaction', { playerId: seat.id, reaction });
     },
 
     // Salir de la sala a propósito: en partida, el suplente juega por ese asiento desde ya

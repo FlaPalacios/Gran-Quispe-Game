@@ -4,15 +4,17 @@
 
 | Archivo | Origen | Licencia |
 | --- | --- | --- |
-| `images/shared/logo.webp` | Logo de Flavio (`recursos-fv/Gran_Quispe_logo.png`), recortado con transparencia y escalado a 1100 px (script en `Fase 2 — Assets.md`) | Propio |
-| `images/cantina/cantina-fondo.webp` | Generado con ChatGPT por Flavio (`recursos-fv/graficos/Fondo1_Cantina_andina.png`), escalado a 2560 px | Propio |
-| `images/bar/bar-fondo.webp` | Generado por Flavio (`recursos-fv/Bar Andino Bajo las Estrellas.png`), escalado a 2560 px | Propio |
-| `images/andino/andino-fondo.webp` | Generado por Flavio (`recursos-fv/Valle andino al atardecer.png`), escalado a 2560 px | Propio |
+| `images/shared/logo.webp` | Logo de Flavio (`recursos-fv/graficos/Gran_Quispe_logo.png`), recortado con transparencia y escalado a 1100 px (script en `documentos/encargos/Fase 2 — Assets.md`) | Propio |
+| `images/cantina/cantina-fondo.webp` | Generado con ChatGPT por Flavio (`recursos-fv/graficos/escenarios/Fondo1_Cantina_andina.png`), escalado a 2560 px | Propio |
+| `images/bar/bar-fondo.webp` | Generado por Flavio (`recursos-fv/graficos/escenarios/Bar Andino Bajo las Estrellas.png`), escalado a 2560 px | Propio |
+| `images/andino/andino-fondo.webp` | Generado por Flavio (`recursos-fv/graficos/escenarios/Valle andino al atardecer.png`), escalado a 2560 px | Propio |
 | `images/cantina/cantina-personaje-1..4.webp` y `cantina-avatar-1..4.webp` | Generados con ChatGPT por Flavio (`recursos-fv/graficos/personajes/Personajes_Caricaturescos_en_Cuadrícula.png`), recortados | Propio |
 | `images/cantina/cantina-personaje-1..4-descubierto.webp` | Hoja de caras de vergüenza (`recursos-fv/graficos/personajes/Cuatro retratos cómicos de vergüenza.png`), recortada y alineada con la neutral | Propio |
 | `images/cantina/cantina-personaje-1..4-descubre.webp` | Hoja de caras triunfales (`recursos-fv/graficos/personajes/Personajes_Cuando lo pillan mintiendo.png`), recortada y alineada con la neutral | Propio |
 
-| `images/shared/mesa.webp` | Generada con ChatGPT por Flavio (`recursos-fv/graficos/fondos y objetos/Mesa de póker rústica de fieltro verde.png`), recortada | Propio |
+| `images/shared/menu-fondo-vertical.webp`, `menu-fondo-horizontal.webp` | Generados por Flavio (`recursos-fv/graficos/escenarios/menu-*.png`), pasados a WebP | Propio |
+| `images/shared/reaccion-*.webp` | Hoja de stickers generada por Flavio (`recursos-fv/graficos/reacciones/reacciones-hoja.png`), recortada con `recortar-reacciones.py` | Propio |
+| `images/shared/mesa.webp` | Generada con ChatGPT por Flavio (`recursos-fv/graficos/objetos/Mesa de póker rústica de fieltro verde.png`), recortada | Propio |
 | `images/shared/cubilete-tapado/-inclinado/-volcado.webp` | Hoja de tres poses (`Tres vasos de cuero ilustrados.png`), recortadas a la misma escala y sobre su punto de apoyo | Propio |
 | `images/shared/dado-1..6.webp` | Cuadrícula de seis caras (`Colección de dados ilustrados 3D.png`), recortadas al mismo tamaño | Propio |
 
@@ -41,17 +43,30 @@ Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 Kenney (www.kenney.nl) no exige crédito, pero lo agradece: se puede nombrar en la pantalla de créditos.
 
 Los de Kenney y BigSoundBank conservan su OGG original (no se recodifica para no perder
-calidad) y su MP3 se sacó de ahí. Los de Flavio salen de `recursos-fv/Sonidos Fla MP3/` con
+calidad) y su MP3 se sacó de ahí. Los de Flavio salen de `recursos-fv/sonidos/efectos-grabados/` con
 `recursos-fv/scripts/convertir-sonidos.py`, que los normaliza y genera el OGG (Opus) y el MP3.
 Cuál suena más fuerte que cuál se ajusta en la tabla `SFX` de `src/app/audio.js`, no en el archivo.
 
-Los que fueron reemplazados quedan en `recursos-fv/sonidos-alternativos/` (destapar, cholada,
+Los que fueron reemplazados quedan en `recursos-fv/papelera/sonidos-alternativos/` (destapar, cholada,
 descubierto, pierde-ronda, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
-llegaron a entrar, en `recursos-fv/sonidos-candidatos/`.
+llegaron a entrar (`sonidos-candidatos/`) se borraron; siguen en el historial de git.
+
+## Voces
+
+En `src/assets/audio/voces/`, en OGG (Opus) y MP3, una por jugada o frase. Hechas por Flavio
+con ElevenLabs (una voz diseñada por personaje) y cortadas con `recursos-fv/scripts/cortar-voces.py`
+desde `recursos-fv/sonidos/voces/`. Licencia según el plan de ElevenLabs: revisar antes de
+publicar o aceptar donaciones.
+
+| Personaje | Archivos |
+| --- | --- |
+| 1 Alancito | `voz-1-*`: las 21 jugadas y las 7 frases |
+| 2 Doña Buricia | `voz-2-*`: las 21 jugadas y las 7 frases |
+| 3 Don Cucho | `voz-3-*`: las 21 jugadas y 6 frases (sin la de quedar fuera) |
 
 ## Música
 
-En `src/assets/audio/`, en OGG (Opus) y MP3. Salen de `recursos-fv/Musica/` con
+En `src/assets/audio/`, en OGG (Opus) y MP3. Salen de `recursos-fv/sonidos/musica/` con
 `recursos-fv/scripts/convertir-musica.sh`, que les recorta el silencio del principio y del final
 para que el bucle no tenga hueco. El volumen de cada pista va en la tabla `MUSIC` de `src/app/audio.js`.
 

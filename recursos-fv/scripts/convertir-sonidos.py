@@ -13,7 +13,7 @@ import numpy as np
 import os
 from fractions import Fraction
 
-SOURCE = 'recursos-fv/Sonidos Fla MP3'
+SOURCE = 'recursos-fv/sonidos/efectos-grabados'
 TARGET = 'src/assets/audio'
 RATE = 44100
 PEAK = 0.95

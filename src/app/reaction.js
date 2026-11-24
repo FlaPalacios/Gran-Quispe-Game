@@ -35,3 +35,21 @@ export function roundReaction(game, { revealing = false } = {}) {
     sound: won ? 'win' : eliminated ? 'eliminated' : caughtLying ? 'caught' : cholada ? null : 'loss',
   };
 }
+
+/**
+ * Quién dice algo al terminar la ronda, y qué frase (las claves de las voces de audio.js).
+ * Va junto a roundReaction para que la frase cuente lo mismo que el remate. No siempre habla
+ * quien está en pantalla: al pillar a un mentiroso, en la mesa queda el pillado y quien lo
+ * pilló le habla desde fuera del cuadro ("¡Te descubrí!"); al desconfiar mal, se ríe quien
+ * cantó y el que perdió se lamenta.
+ * @returns {{playerId: string, key: string}|null} null mientras la ronda sigue en juego.
+ */
+export function roundVoice(game) {
+  const result = game?.round?.result;
+  if (!result) return null;
+  if (game.phase === PHASES.GAME_OVER) return { playerId: game.winnerId, key: 'gano' };
+  if (game.players.find((p) => p.id === result.loserId)?.eliminated) return { playerId: result.loserId, key: 'fuera' };
+  // Pilló al mentiroso: habla quien desconfió
+  if (result.type === RESULTS.DOUBT && result.loserId === result.callerId) return { playerId: result.doubterId, key: 'pille' };
+  return { playerId: result.loserId, key: result.type === RESULTS.CHOLADA ? 'cholada' : 'pierdo' };
+}

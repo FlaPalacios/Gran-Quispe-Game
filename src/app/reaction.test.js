@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame } from '../engine/rules.js';
-import { roundReaction } from './reaction.js';
+import { roundReaction, roundVoice } from './reaction.js';
 
 // rng que devuelve los valores en orden; para un dado d se usa (d - 1) / 6
 const dieValue = (d) => (d - 1) / 6;
@@ -85,5 +85,29 @@ describe('roundReaction', () => {
     const over = act(called, 'DOUBT', 'beto');
     expect(over.winnerId).toBe('beto');
     expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'gloating', sound: 'win' });
+  });
+});
+
+describe('roundVoice', () => {
+  const called = (dice, call) => act(roll(newGame(), 'ana', dice), 'CALL', 'ana', call);
+
+  it('pillar al mentiroso lo dice quien desconfió; equivocarse al desconfiar, el que perdió', () => {
+    expect(roundVoice(called([4, 3], 43))).toBe(null);
+    expect(roundVoice(act(called([3, 1], 65), 'DOUBT', 'beto'))).toEqual({ playerId: 'beto', key: 'pille' });
+    expect(roundVoice(act(called([6, 5], 65), 'DOUBT', 'beto'))).toEqual({ playerId: 'beto', key: 'pierdo' });
+  });
+
+  it('creer un Quispe es perder; la Cholada tiene su frase', () => {
+    expect(roundVoice(act(called([3, 1], 21), 'BELIEVE', 'beto'))).toEqual({ playerId: 'beto', key: 'pierdo' });
+    const s = act(roll(act(called([4, 2], 62), 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
+    expect(roundVoice(s)).toEqual({ playerId: 'beto', key: 'cholada' });
+  });
+
+  it('quedar fuera y ganar la partida mandan sobre la ronda', () => {
+    const out = act(act(roll(newGame({ mode: 'lives', lives: 1 }), 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
+    expect(roundVoice(out)).toEqual({ playerId: 'ana', key: 'fuera' });
+    const duel = newGame({ mode: 'lives', lives: 1 }, PLAYERS.slice(0, 2));
+    const won = act(act(roll(duel, 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
+    expect(roundVoice(won)).toEqual({ playerId: 'beto', key: 'gano' });
   });
 });

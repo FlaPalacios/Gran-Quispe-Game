@@ -83,6 +83,7 @@ io.on('connection', (socket) => {
   handle('start', rooms.start);
   handle('action', rooms.action);
   handle('shake', rooms.shake);
+  handle('react', rooms.react);
   handle('leave', rooms.quit);
   socket.on('disconnect', () => rooms.disconnect(socket.id));
 });

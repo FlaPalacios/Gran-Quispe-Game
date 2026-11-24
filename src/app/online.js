@@ -9,7 +9,8 @@ import { clearOnlineSeat, loadOnlineSeat, saveOnlineSeat } from '../storage/loca
 const REPLY_TIMEOUT_MS = 6000;
 
 // onLobby(lobby): llegó cómo está la sala. onLost(código): se perdió la sala (o el servidor).
-export function createOnline(store, { onLobby, onLost }) {
+// onReaction({ playerId, reaction }): alguien mandó un sticker.
+export function createOnline(store, { onLobby, onLost, onReaction }) {
   let socket = null;
   let seat = null; // { code, playerId, token }
 
@@ -19,6 +20,7 @@ export function createOnline(store, { onLobby, onLost }) {
     socket.on('lobby', onLobby);
     socket.on('state', ({ game, you, elapsed, presence = [] }) => store.receive(withBotNames(game, presence), { you, elapsed, presence }));
     socket.on('signal', (name) => store.receiveSignal(name));
+    socket.on('reaction', onReaction);
     // Este asiento se abrió en otro celular o pestaña
     socket.on('lost', (code) => lose(code));
     // Tras un corte (pantalla bloqueada, wifi) se vuelve al mismo asiento
@@ -89,6 +91,7 @@ export function createOnline(store, { onLobby, onLost }) {
       }
       return request('join', { code, name }).then(remember);
     },
+    react: (reaction) => socket?.emit('react', { reaction }),
     // Empezar, o volver a jugar cuando terminó la partida (solo quien creó la sala)
     start: () => request('start'),
 

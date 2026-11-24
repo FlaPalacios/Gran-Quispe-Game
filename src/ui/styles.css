@@ -243,8 +243,10 @@ p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  /* Arriba van la lámpara y la repisa del fondo: el logo y los botones se apoyan abajo */
+  justify-content: flex-end;
   gap: 2rem;
+  background: var(--color-fondo) url('../assets/images/shared/menu-fondo-vertical.webp') center top / cover no-repeat;
 }
 
 .menu__corner {
@@ -253,11 +255,10 @@ p {
   right: 16px;
 }
 
-/* El logo ya viene recortado con transparencia (ver recursos-fv/Fase 2 — Assets.md) */
+/* El logo ya viene recortado con transparencia (ver recursos-fv/documentos/encargos/Fase 2 — Assets.md) */
 .logo {
-  width: min(88%, 520px);
+  width: min(80%, 460px);
   height: auto;
-  margin-top: 6vh;
 }
 
 .menu__actions {
@@ -468,6 +469,8 @@ p {
 }
 
 .history .call-chip {
+  /* El ítem hereda el crema del texto: sobre el dorado no se lee, va en negro */
+  color: var(--color-borde);
   font-size: 0.9rem;
   padding: 0 0.55rem;
 }
@@ -1016,12 +1019,15 @@ p {
 :root[data-modo='pc'] .menu {
   flex-direction: row;
   justify-content: center;
-  align-items: center;
+  /* Debajo de la repisa del fondo, que ocupa la mitad de arriba al centro */
+  align-items: flex-end;
   gap: 8vw;
+  padding-bottom: 8vh;
+  background-image: url('../assets/images/shared/menu-fondo-horizontal.webp');
 }
 
 :root[data-modo='pc'] .logo {
-  width: min(44%, 620px);
+  width: min(36%, 520px);
   margin: 0;
 }
 
@@ -1278,5 +1284,102 @@ p {
 
   .keypad__quispe.is-now {
     animation: none;
+  }
+}
+
+/* ---------- Reacciones (en línea) ---------- */
+
+.reactions {
+  position: relative;
+}
+
+.reactions summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.reactions summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Fila de stickers que cuelga del botón, sobre la escena */
+.reactions__list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: var(--color-panel);
+  border: var(--borde-grueso) solid var(--color-borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra-solida);
+}
+
+.reactions__pick {
+  display: grid;
+  place-items: center;
+  min-width: var(--tactil-min);
+  min-height: var(--tactil-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.reactions__pick:active img {
+  transform: scale(0.9);
+}
+
+/* Los stickers que llegan aparecen al centro de la escena, uno debajo del otro */
+.reaction-feed {
+  position: fixed;
+  left: calc(var(--zona-scene-x) + var(--zona-scene-w) / 2);
+  top: calc(var(--zona-scene-y) + var(--zona-scene-h) * 0.3);
+  transform: translateX(-50%);
+  z-index: 20;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.reaction-toast {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  animation: reaction-pop 2.6s ease-out forwards;
+}
+
+.reaction-toast img {
+  filter: drop-shadow(0 4px 0 var(--color-borde));
+}
+
+.reaction-toast span {
+  padding: 0.1rem 0.6rem;
+  border: 2px solid var(--color-borde);
+  border-radius: 999px;
+  background: var(--color-texto);
+  color: var(--color-fondo);
+  font-size: 0.85rem;
+}
+
+@keyframes reaction-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  12% { opacity: 1; transform: scale(1.12); }
+  20% { transform: scale(1); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-24px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-toast {
+    animation-name: reaction-fade;
+  }
+
+  @keyframes reaction-fade {
+    0%, 85% { opacity: 1; }
+    100% { opacity: 0; }
   }
 }

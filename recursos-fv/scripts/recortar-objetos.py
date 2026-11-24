@@ -18,7 +18,7 @@ from PIL import Image
 import numpy as np
 import os
 
-SOURCE = 'recursos-fv/graficos/fondos y objetos'
+SOURCE = 'recursos-fv/graficos/objetos'
 PNG_DIR = 'recursos-fv/graficos/png-originales'
 WEBP_DIR = 'src/assets/images/shared'
 ALPHA = 16

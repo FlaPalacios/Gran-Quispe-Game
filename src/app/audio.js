@@ -28,7 +28,8 @@ export const SFX = Object.freeze({
   laughGranny: { file: 'sfx-risa-abuela', volume: 1 },
 });
 
-const files = import.meta.glob('../assets/audio/*.{ogg,mp3}', { eager: true, query: '?url', import: 'default' });
+// Efectos y música en audio/; las voces de los personajes, en audio/voces/
+const files = import.meta.glob('../assets/audio/**/*.{ogg,mp3}', { eager: true, query: '?url', import: 'default' });
 
 // Safari no reproduce OGG; el resto sí y pesa menos. Los archivos son Vorbis u Opus
 // según de dónde salieron, así que se pregunta por el contenedor y no por un codec.
@@ -68,15 +69,21 @@ function decodeAll() {
     for (const { file } of Object.values(SFX)) element(file);
     return;
   }
-  for (const { file } of Object.values(SFX)) {
-    const url = urlOf(file);
-    if (!url || buffers.has(file)) continue;
-    fetch(url)
-      .then((response) => response.arrayBuffer())
-      .then((data) => context.decodeAudioData(data))
-      .then((buffer) => buffers.set(file, buffer))
-      .catch(() => {}); // sin ese efecto, el juego sigue igual
-  }
+  for (const { file } of Object.values(SFX)) decode(file);
+  decodeVoices(); // las de una partida que empezó antes del primer toque
+}
+
+const requested = new Set(); // archivos ya pedidos, para no bajarlos dos veces
+
+function decode(file) {
+  const url = urlOf(file);
+  if (!context || !url || requested.has(file)) return;
+  requested.add(file);
+  fetch(url)
+    .then((response) => response.arrayBuffer())
+    .then((data) => context.decodeAudioData(data))
+    .then((buffer) => buffers.set(file, buffer))
+    .catch(() => requested.delete(file)); // sin ese sonido, el juego sigue igual
 }
 
 // Plantilla por sonido: al reproducir se clona, así se pueden solapar
@@ -92,7 +99,11 @@ function element(file) {
 
 export function playSfx(key) {
   const sfx = SFX[key];
-  if (!sfx || isMuted() || !extension) return;
+  if (sfx) play(sfx);
+}
+
+function play(sfx) {
+  if (isMuted() || !extension) return;
   preloadSfx();
 
   const buffer = buffers.get(sfx.file);
@@ -135,6 +146,40 @@ function playElement({ file, volume }) {
     sound.play().catch(() => {});
   } catch {
     // Sin audio disponible, el juego sigue igual
+  }
+}
+
+// Voces de los personajes (recursos-fv/scripts/cortar-voces.py): las jugadas cantadas ('31',
+// '110', 'quispe') y las frases ('creo', 'desconfio', 'pille', 'pierdo', 'cholada', 'gano',
+// 'fuera'). Archivo voces/voz-<personaje desde 1>-<clave>. Un personaje sin grabar, o una
+// frase que no grabó, simplemente no suena: por eso se puede preguntar antes con hasVoice.
+const VOICE_VOLUME = 1;
+const voiceFile = (characterIndex, key) => `voces/voz-${characterIndex + 1}-${key}`;
+
+export const hasVoice = (characterIndex, key) => characterIndex >= 0 && Boolean(urlOf(voiceFile(characterIndex, key)));
+
+export function playVoice(characterIndex, key) {
+  if (hasVoice(characterIndex, key)) play({ file: voiceFile(characterIndex, key), volume: VOICE_VOLUME });
+}
+
+// Al empezar una partida se preparan las voces de los personajes que juegan, no las de todos.
+// Si todavía no hubo un toque (se recargó en medio de una partida online), solo se anotan: crear
+// el contexto de audio antes del gesto lo deja dormido en iPhone, y el toque ya no lo despertaría.
+const wantedVoices = new Set();
+
+export function preloadVoices(characterIndexes) {
+  for (const index of characterIndexes) wantedVoices.add(index);
+  decodeVoices();
+}
+
+function decodeVoices() {
+  if (!context || !extension) return;
+  const all = Object.keys(files);
+  for (const index of wantedVoices) {
+    const prefix = `../assets/audio/${voiceFile(index, '')}`;
+    for (const path of all) {
+      if (path.startsWith(prefix) && path.endsWith(`.${extension}`)) decode(path.slice('../assets/audio/'.length, -extension.length - 1));
+    }
   }
 }
 

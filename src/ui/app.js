@@ -13,6 +13,7 @@ import { stopClock } from './PressureClock.js';
 import { MainMenu } from './MainMenu.js';
 import { Lobby, OnlineMenu } from './OnlineScreens.js';
 import { PassDeviceScreen } from './PassDeviceScreen.js';
+import { showReaction } from './Reactions.js';
 import { RulesPanel, defaultDraft } from './RulesPanel.js';
 
 export function mountApp(root, store, stage) {
@@ -20,8 +21,10 @@ export function mountApp(root, store, stage) {
   let draft = defaultDraft();
   let callSheetOpen = false;
   let foldPlayers = Boolean(stage?.get()?.players.folded);
-  // La lista plegada vive aquí y no en el HUD: si no, cada aviso del store la cerraría
+  // La lista plegada y el selector de stickers viven aquí y no en el HUD: si no, cada aviso
+  // del store los cerraría
   let playersOpen = false;
+  let reactionsOpen = false;
 
   // Modo online: lo escrito en la pantalla de entrar, si la configuración crea una sala y
   // cómo está la sala de espera
@@ -33,6 +36,10 @@ export function mountApp(root, store, stage) {
       lobby = next;
       if (!next.started) screen = 'lobby';
       if (!store.get().game) render();
+    },
+    onReaction: ({ playerId, reaction }) => {
+      const name = store.get().game?.players.find((p) => p.id === playerId)?.name;
+      if (name) showReaction({ name, reaction });
     },
     onLost: (code) => {
       lobby = null;
@@ -163,6 +170,15 @@ export function mountApp(root, store, stage) {
       foldPlayers,
       playersOpen,
       onTogglePlayers: (open) => (playersOpen = open),
+      reactions: snapshot.online && {
+        open: reactionsOpen,
+        onToggle: (open) => (reactionsOpen = open),
+        onPick: (reaction) => {
+          online.react(reaction);
+          reactionsOpen = false;
+          render();
+        },
+      },
       // En línea, salir deja la sala: el asiento se guarda un minuto y luego juega un bot
       onExit: () => (snapshot.online ? leaveRoom() : go('menu', () => store.leave())),
       onOpenCalls: () => {

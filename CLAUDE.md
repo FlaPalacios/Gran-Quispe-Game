@@ -5,7 +5,7 @@ Juego de dados y faroleo cusqueño (el Quispe tradicional) recreado como aplicac
 ## Reglas de trabajo
 
 - **Nunca leer, abrir, analizar ni modificar nada dentro de `recursos-fv/ignorar/`.** Ignorarla por completo aunque parezca relevante. Está bloqueada en `.claude/settings.json` y en `.gitignore`.
-- El documento fuente del plan es `recursos-fv/Gran Quispe — Plan de desarrollo.md` (su PDF tiene además los diagramas de arquitectura y de fases). Las respuestas del usuario registradas en este archivo tienen prioridad sobre el plan original. Si algo no está claro, preguntar.
+- El documento fuente del plan es `recursos-fv/documentos/Gran Quispe — Plan de desarrollo.md` (su PDF tiene además los diagramas de arquitectura y de fases). Las respuestas del usuario registradas en este archivo tienen prioridad sobre el plan original. Si algo no está claro, preguntar.
 - Responder y comentar en español. El código (nombres de variables, funciones, archivos) va en inglés.
 - No inventar reglas del juego que no estén definidas aquí: preguntar (ver "Decisiones pendientes").
 - Seguir el skill `codigo-limpio-quispe` al escribir o revisar código y el skill `identidad-visual` al tocar gráficos, colores o fuentes.
@@ -28,7 +28,7 @@ npm run online     # modo online: compila y levanta el servidor en el puerto 300
 npm run server     # solo el servidor online, para desarrollar con npm run dev al lado (Vite le pasa las conexiones)
 ```
 
-Con `npm run dev`, `http://localhost:5173/galeria.html` muestra qué assets faltan y cómo se ven (solo desarrollo, no entra al build). La lista vive en `src/dev/assetList.js` y la guía para crearlos en `recursos-fv/Fase 2 — Assets.md`.
+Con `npm run dev`, `http://localhost:5173/galeria.html` muestra qué assets faltan y cómo se ven (solo desarrollo, no entra al build). La lista vive en `src/dev/assetList.js` y la guía para crearlos en `recursos-fv/documentos/encargos/Fase 2 — Assets.md`.
 
 Requiere Node 22.12 o superior.
 
@@ -75,9 +75,13 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 
 **Sonido (`src/app/audio.js` y `src/app/gameSounds.js`):** suena por **Web Audio**, porque un elemento `<audio>` tarda hasta medio segundo en arrancar en el celular y el golpe del cubilete tiene que caer a tiempo; los archivos se decodifican una vez y cada toque es un nodo nuevo. Si el navegador no trae Web Audio se usan elementos `<audio>`. `playSfx(clave)` con las claves de la tabla `SFX` (`shake`, `thud`, `reveal`, `cholada`, `click`, `start`, `believe`, `eliminated`, `win`, `cheer` y las tres risas), y silencio recordado en localStorage. Cada efecto se declara una sola vez en la tabla `SFX` de `audio.js`, con su archivo y su volumen: el volumen se empareja ahí, no en el archivo de audio. `connectGameSounds(store)` escucha los cambios de fase y la señal `gameStart` (solo al empezar una partida; continuar una guardada entra en silencio) y decide qué suena: es el único lugar donde se define eso, salvo el clic de los botones, que `src/ui/app.js` resuelve por delegación. Su `stingFor()` traduce el desenlace que da `reaction.js` en los efectos que suenan: perder la ronda se remata con una risa (las tres se van turnando, no salen al azar) y ganar la partida, con dos sonidos a la vez. No usa Phaser, porque el sonido también lo dispara la UI en HTML.
 
+**Voces de los personajes (`playVoice` en `audio.js`):** cada personaje dice lo que canta su jugador (`'31'` … `'160'`, `'quispe'`), "creo" al creer, "desconfío" al desconfiar (mientras se levanta el cubilete) y una frase al terminar la ronda: `roundVoice()` de `reaction.js` dice quién habla y cuál (`pille` quien pilló al mentiroso, `pierdo`, `cholada`, `fuera`, `gano`). Si el personaje tiene grabada esa frase, reemplaza a la risa del remate y entra cuando terminan los demás sonidos (como mucho 1,2 s después); si no la tiene, suena la risa de siempre. Archivos en `src/assets/audio/voces/voz-<personaje>-<clave>`, cortados con `recursos-fv/scripts/cortar-voces.py`; las voces de quienes juegan se cargan al empezar la partida. Por ahora hablan los personajes 1 a 3 (Alancito, Doña Buricia y Don Cucho); Don Dago (4) sigue mudo.
+
 **Música (`src/app/audio.js`):** dos pistas en bucle de la tabla `MUSIC` (`menu` en el menú, la configuración y la sala de espera; `game` en la partida), que `src/ui/app.js` elige con `setMusic` en cada redibujo. Va por un solo elemento `<audio>` y no por Web Audio, para no decodificar minutos de música en memoria. Se calla con el silencio general, con la preferencia `music` y con la pestaña en segundo plano; arranca en el primer toque, porque antes el navegador no deja sonar nada.
 
-**Menú, nueva partida y Configuración:** el botón Jugar abre un panel corto (jugadores, modo y escenario). Las variantes de reglas y las preferencias de pantalla y sonido van aparte, en Configuración desde el menú: lo elegido se guarda (`preferences.js`, clave `variants`) y vale para las partidas siguientes, también al crear una sala online. La nueva partida nombra al pie qué reglas extra están puestas. "Cómo se juega" (`src/ui/HowToPlay.js`) explica lo esencial en cuatro tarjetas. En la partida, el HUD muestra lo cantado en la ronda (desde la segunda jugada) en una tira encima del panel de turno.
+**Reacciones en línea (`src/ui/Reactions.js`):** un botón de la barra superior abre cuatro stickers (`reaccion-*.webp`). El servidor los reparte a toda la sala (`react` en `rooms.js`, uno cada 2 s por asiento, solo los de su lista `REACTIONS`) y cada celular los muestra un momento sobre la escena con el nombre de quien lo mandó.
+
+**Menú, nueva partida y Configuración:** el menú tiene su propio fondo en CSS (`menu-fondo-vertical` en celular y `-horizontal` en PC), con la lámpara y la repisa arriba y el logo y los botones apoyados abajo. el botón Jugar abre un panel corto (jugadores, modo y escenario). Las variantes de reglas y las preferencias de pantalla y sonido van aparte, en Configuración desde el menú: lo elegido se guarda (`preferences.js`, clave `variants`) y vale para las partidas siguientes, también al crear una sala online. La nueva partida nombra al pie qué reglas extra están puestas. "Cómo se juega" (`src/ui/HowToPlay.js`) explica lo esencial en cuatro tarjetas. En la partida, el HUD muestra lo cantado en la ronda (desde la segunda jugada) en una tira encima del panel de turno.
 
 **Personajes (`src/app/characters.js`):** reparte un personaje por jugador según su posición en la lista. Lo usan la tarjeta HTML (avatar) y la escena (personaje grande), para que siempre muestren a la misma persona. Si hay más jugadores que personajes, se repiten.
 
@@ -155,8 +159,14 @@ server/
 .claude/
   agents/              # game-logic, phaser-scenes, code-reviewer
   skills/              # identidad-visual, codigo-limpio-quispe
-recursos-fv/           # plan, referencias y assets de origen (la subcarpeta ignorar/ no se toca)
-  scripts/             # recortar-personajes.py, recortar-objetos.py, convertir-sonidos.py
+recursos-fv/           # material de origen (la subcarpeta ignorar/ no se toca)
+  creditos.md          # origen y licencia de cada asset
+  documentos/          # el plan original (md y pdf) y, en encargos/, las guías y pedidos de assets
+  graficos/            # originales: logo, escenarios (y fondos del menú), objetos, personajes, reacciones, png-originales
+  sonidos/             # originales: efectos-grabados, musica y voces de los personajes
+  referencias/         # wireframe, plantillas de escenario y bocetos de pantalla
+  scripts/             # convertir sonidos y música, cortar voces, recortar personajes, objetos y reacciones
+  papelera/            # lo que ya no se usa (sonidos reemplazados, capturas viejas)
 ```
 
 ## Subagentes y skills
@@ -302,8 +312,10 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 ### Fase 5: Después del MVP
 
 - [x] Pantalla "Cómo se juega", historial de lo cantado en la ronda y Configuración aparte del panel de nueva partida
-- [ ] Voces de los personajes cantando y frases de ambiente (las graba Flavio con ElevenLabs)
-- [ ] Fondo nuevo del menú, favicon, imagen para compartir y reacciones rápidas en línea
+- [x] Voces de Alancito, Doña Buricia y Don Cucho: jugadas, creer, desconfiar y frases de fin de ronda (ElevenLabs)
+- [ ] Voces de Don Dago
+- [x] Fondo nuevo del menú y reacciones rápidas en línea
+- [ ] Favicon e imagen para compartir
 - [ ] Inglés y términos en quechua, con selector de idioma
 - [x] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular (en la laptop; falta subirlo a un hosting)
 
