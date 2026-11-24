@@ -1,6 +1,10 @@
-// Panel de configuración de partida: modo, jugadores (2 a 8), vidas, texto de castigo y variantes.
+// Paneles de configuración, en dos pantallas para no enredar a quien solo quiere jugar:
+// - Nueva partida (botón Jugar): jugadores, modo y escenario.
+// - Configuración (desde el menú): variantes de reglas y preferencias de pantalla y sonido.
+//   Lo que se elige ahí se guarda y vale para las partidas siguientes.
 // Las variantes se generan desde engine/variants.js: agregar una nueva no requiere tocar este archivo,
 // solo sus textos en i18n.
+import { setMusicOn } from '../app/audio.js';
 import { getPreference, setPreference } from '../app/preferences.js';
 import { MAX_LIVES, MIN_LIVES, DEFAULT_LIVES, MODES } from '../engine/modes.js';
 import { MAX_PLAYERS, MIN_PLAYERS, SCENARIOS } from '../engine/rules.js';
@@ -21,8 +25,18 @@ export function defaultDraft() {
     names: Array.from({ length: DEFAULT_PLAYER_COUNT }, () => ''),
     // Quién juega cada asiento: 'human' o la personalidad de un bot
     kinds: Array.from({ length: DEFAULT_PLAYER_COUNT }, () => HUMAN),
-    variants: resolveVariants(),
+    variants: savedVariants(),
   };
+}
+
+// Las variantes elegidas en Configuración. Si lo guardado ya no encaja (cambió una variante
+// entre versiones del juego), se vuelve a las de por defecto.
+function savedVariants() {
+  try {
+    return resolveVariants(getPreference('variants') ?? {});
+  } catch {
+    return resolveVariants();
+  }
 }
 
 // Nombre de un asiento que se dejó vacío
@@ -47,11 +61,13 @@ export function draftToSetup(draft) {
   };
 }
 
-// startLabel: el texto del botón final ("Guardar y jugar", o "Crear sala" en línea)
-export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start') }) {
+// startLabel: el texto del botón final ("Jugar", o "Crear sala" en línea).
+// settings: la pantalla de Configuración en vez de la de nueva partida.
+export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start'), settings = false }) {
   const root = h('main', { class: 'screen setup' });
   const update = (fn) => {
     fn(draft);
+    if (settings) setPreference('variants', draft.variants);
     render();
   };
 
@@ -61,25 +77,34 @@ export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start
         'header',
         { class: 'setup__header' },
         h('button', { class: 'btn btn--icon btn--light', onClick: onBack, 'aria-label': t('setup.back') }, '‹'),
-        h('h1', { class: 'setup__title' }, t('setup.title')),
+        h('h1', { class: 'setup__title' }, t(settings ? 'settings.title' : 'setup.title')),
       ),
-      h(
-        'div',
-        { class: 'setup__body' },
-        modeCard(),
-        scenarioCard(),
-        playersCard(),
-        draft.mode === 'lives' && livesCard(),
-        draft.mode === 'penalty' && penaltyCard(),
-        variantsCard(),
-        displayCard(),
-      ),
+      settings
+        ? h('div', { class: 'setup__body' }, variantsCard(), displayCard())
+        : h(
+            'div',
+            { class: 'setup__body' },
+            playersCard(),
+            modeCard(),
+            draft.mode === 'lives' && livesCard(),
+            draft.mode === 'penalty' && penaltyCard(),
+            scenarioCard(),
+            h('p', { class: 'setup__note' }, t('setup.extras', { list: activeVariants() })),
+          ),
       h(
         'footer',
         { class: 'setup__footer' },
-        h('button', { class: 'btn btn--primary btn--big', onClick: () => onStart(draftToSetup(draft)) }, startLabel),
+        settings
+          ? h('button', { class: 'btn btn--primary btn--big', onClick: onBack }, t('settings.done'))
+          : h('button', { class: 'btn btn--primary btn--big', onClick: () => onStart(draftToSetup(draft)) }, startLabel),
       ),
     );
+  }
+
+  // Las reglas extra no se eligen aquí, pero se nombran para que nadie se sorprenda en la mesa
+  function activeVariants() {
+    const names = VARIANTS.filter((v) => draft.variants[v.id].enabled).map((v) => t(`variants.${v.id}.name`));
+    return names.length ? names.join(', ') : t('setup.extras.none');
   }
 
   function modeCard() {
@@ -230,12 +255,13 @@ export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start
   function displayCard() {
     return card(
       t('setup.display'),
+      preferenceRow('music', setMusicOn),
       preferenceRow('simpleKeypad'),
       preferenceRow('silhouettes'),
     );
   }
 
-  function preferenceRow(key) {
+  function preferenceRow(key, save = (value) => setPreference(key, value)) {
     return h(
       'label',
       { class: 'variant__row' },
@@ -250,13 +276,29 @@ export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start
         type: 'checkbox',
         role: 'switch',
         checked: getPreference(key),
-        onChange: (e) => setPreference(key, e.target.checked),
+        onChange: (e) => save(e.target.checked),
       }),
     );
   }
 
   render();
   return root;
+}
+
+// Armado común de las pantallas de menú: cabecera con volver, cuerpo y botón abajo
+export function screen({ title, onBack, body, footer }) {
+  return h(
+    'main',
+    { class: 'screen setup' },
+    h(
+      'header',
+      { class: 'setup__header' },
+      h('button', { class: 'btn btn--icon btn--light', onClick: onBack, 'aria-label': t('setup.back') }, '‹'),
+      h('h1', { class: 'setup__title' }, title),
+    ),
+    h('div', { class: 'setup__body' }, ...body),
+    footer && h('footer', { class: 'setup__footer' }, footer),
+  );
 }
 
 export function card(title, ...children) {

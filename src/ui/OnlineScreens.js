@@ -1,23 +1,8 @@
 // Pantallas del modo online: entrar a una sala (o ir a crearla) y la sala de espera.
 // Usan el mismo armado que la configuración: cabecera, tarjetas y botón abajo.
 import { t } from '../i18n/index.js';
-import { card } from './RulesPanel.js';
+import { card, screen } from './RulesPanel.js';
 import { h } from './dom.js';
-
-function screen({ title, onBack, body, footer }) {
-  return h(
-    'main',
-    { class: 'screen setup' },
-    h(
-      'header',
-      { class: 'setup__header' },
-      h('button', { class: 'btn btn--icon btn--light', onClick: onBack, 'aria-label': t('setup.back') }, '‹'),
-      h('h1', { class: 'setup__title' }, title),
-    ),
-    h('div', { class: 'setup__body' }, ...body),
-    footer && h('footer', { class: 'setup__footer' }, footer),
-  );
-}
 
 const errorLine = (code) => code && h('p', { class: 'online__error', role: 'alert' }, t(`online.error.${code}`));
 

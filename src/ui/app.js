@@ -1,5 +1,5 @@
 // Enrutador de la capa HTML: menú → configuración → partida.
-import { playSfx } from '../app/audio.js';
+import { playSfx, setMusic } from '../app/audio.js';
 import { needsPassScreen } from '../app/gameStore.js';
 import { createOnline } from '../app/online.js';
 import { getPreference } from '../app/preferences.js';
@@ -7,6 +7,7 @@ import { t } from '../i18n/index.js';
 import { loadGame } from '../storage/localSave.js';
 import { CallKeypad } from './CallKeypad.js';
 import { CallSheet, GameHud } from './GameHud.js';
+import { HowToPlay } from './HowToPlay.js';
 import { PlayIntro } from './PlayIntro.js';
 import { stopClock } from './PressureClock.js';
 import { MainMenu } from './MainMenu.js';
@@ -94,6 +95,7 @@ export function mountApp(root, store, stage) {
   function render() {
     stopClock();
     const snapshot = store.get();
+    setMusic(snapshot.game ? 'game' : 'menu');
     if (snapshot.game) {
       root.replaceChildren(...gameView(snapshot));
     } else if (screen === 'lobby' && lobby) {
@@ -112,6 +114,10 @@ export function mountApp(root, store, stage) {
           onJoin: () => request(() => online.join(onlineForm.code.trim(), onlineForm.name.trim())),
         }),
       );
+    } else if (screen === 'howto') {
+      root.replaceChildren(HowToPlay({ onBack: () => go('menu'), onPlay: startSetup }));
+    } else if (screen === 'settings') {
+      root.replaceChildren(RulesPanel({ draft, settings: true, onBack: () => go('menu') }));
     } else if (screen === 'setup') {
       root.replaceChildren(
         RulesPanel({
@@ -131,11 +137,10 @@ export function mountApp(root, store, stage) {
         MainMenu({
           canContinue: Boolean(saved),
           onContinue: () => store.resume(saved),
-          onPlay: () => {
-            creatingRoom = false;
-            go('setup');
-          },
+          onPlay: startSetup,
           onOnline: () => go('online'),
+          onHowTo: () => go('howto'),
+          onSettings: () => go('settings'),
           onRefresh: render,
         }),
       );
@@ -191,6 +196,11 @@ export function mountApp(root, store, stage) {
         },
       }),
     ];
+  }
+
+  function startSetup() {
+    creatingRoom = false;
+    go('setup');
   }
 
   function go(next, action) {

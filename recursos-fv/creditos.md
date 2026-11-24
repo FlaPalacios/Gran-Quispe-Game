@@ -48,3 +48,14 @@ Cuál suena más fuerte que cuál se ajusta en la tabla `SFX` de `src/app/audio.
 Los que fueron reemplazados quedan en `recursos-fv/sonidos-alternativos/` (destapar, cholada,
 descubierto, pierde-ronda, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
 llegaron a entrar, en `recursos-fv/sonidos-candidatos/`.
+
+## Música
+
+En `src/assets/audio/`, en OGG (Opus) y MP3. Salen de `recursos-fv/Musica/` con
+`recursos-fv/scripts/convertir-musica.sh`, que les recorta el silencio del principio y del final
+para que el bucle no tenga hueco. El volumen de cada pista va en la tabla `MUSIC` de `src/app/audio.js`.
+
+| Archivo | Origen | Licencia |
+| --- | --- | --- |
+| `musica-menu` | "Cantina de Noche", hecha por Flavio con Suno (70 bpm) | Según el plan de Suno con que se generó: revisar antes de publicar o aceptar donaciones |
+| `musica-partida` | Hecha por Flavio con ElevenLabs Music (70 bpm) | Según el plan de ElevenLabs: revisar antes de publicar o aceptar donaciones |

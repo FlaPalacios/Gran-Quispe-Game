@@ -58,8 +58,24 @@ export function GameHud({
       'section',
       { class: 'zona hud__play' },
       presenceNotice(snapshot),
+      callHistory(game),
       turnCard(snapshot, current, store, !callSheetOpen),
       actions(snapshot, current, { store, onOpenCalls, onPlayAgain, onMenu }),
+    ),
+  );
+}
+
+// Lo que se fue cantando en la ronda, como en la mesa de verdad, donde todos lo recuerdan.
+// Con una sola jugada no hace falta: el panel de turno ya la nombra. Lo más nuevo va a la
+// derecha; si no cabe, se pierde por la izquierda lo más viejo.
+function callHistory(game) {
+  const { calls } = game.round;
+  if (calls.length < 2) return null;
+  return h(
+    'ol',
+    { class: 'history', 'aria-label': t('game.history') },
+    [...calls].reverse().map(({ playerId, value }) =>
+      h('li', { class: 'history__item' }, h('span', { class: 'history__name' }, playerName(game, playerId)), h('span', { class: 'call-chip' }, formatCall(value))),
     ),
   );
 }

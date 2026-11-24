@@ -267,6 +267,13 @@ p {
   margin-bottom: 4vh;
 }
 
+/* Cómo se juega y Configuración: secundarios, uno al lado del otro */
+.menu__more {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
 /* ---------- Configuración ---------- */
 
 .setup {
@@ -422,6 +429,109 @@ p {
   background: var(--color-panel);
   color: var(--color-amarillo-cantar);
   font-size: 0.9rem;
+}
+
+/* Lo cantado en la ronda: una tira de una línea; lo más nuevo a la derecha y, si no cabe,
+   se corre por la izquierda (row-reverse deja el desplazamiento en el extremo nuevo) */
+.history {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  overflow-x: auto;
+  list-style: none;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.history__item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  color: var(--color-texto);
+  font-size: 0.85rem;
+}
+
+/* Flecha entre jugadas, de la vieja a la nueva */
+.history__item:not(:first-child)::after {
+  content: '›';
+  margin-left: 0.15rem;
+  color: var(--color-texto-suave);
+}
+
+.history__name {
+  max-width: 7em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history .call-chip {
+  font-size: 0.9rem;
+  padding: 0 0.55rem;
+}
+
+/* Nota al pie de la nueva partida: qué reglas extra están puestas */
+.setup__note {
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
+}
+
+/* ---------- Cómo se juega ---------- */
+
+.howto__steps,
+.howto__scale {
+  display: grid;
+  gap: 0.9rem;
+  list-style: none;
+}
+
+.howto__step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.howto__step p,
+.howto__scale span {
+  color: var(--color-texto-suave);
+}
+
+.howto__option {
+  color: var(--color-texto);
+}
+
+.howto__n {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-borde);
+  background: var(--color-retablo-dorado);
+  color: var(--color-borde);
+  font-family: var(--font-display);
+}
+
+.howto__play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.howto__die {
+  width: 40px;
+  height: 40px;
+}
+
+.howto__scale li {
+  display: grid;
+  gap: 0.2rem;
 }
 
 /* Un asiento: el nombre y quién lo juega (persona o bot) */

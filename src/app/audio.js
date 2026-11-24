@@ -151,4 +151,59 @@ export function sfxDuration(key) {
 
 export const isMuted = () => getPreference('muted');
 
-export const setMuted = (value) => setPreference('muted', value);
+export function setMuted(value) {
+  setPreference('muted', value);
+  syncMusic();
+}
+
+// Música de fondo: un solo <audio> en bucle que cambia de pista. No pasa por Web Audio porque
+// decodificar minutos de música ocuparía decenas de MB de memoria en el celular, y aquí no
+// importa que tarde medio segundo en arrancar. Las pistas ya vienen recortadas sin silencios
+// al principio ni al final (recursos-fv/scripts/convertir-musica.sh), para que el bucle no
+// tenga hueco. Va bajita: los efectos y las voces van por encima.
+export const MUSIC = Object.freeze({
+  menu: { file: 'musica-menu', volume: 0.3 },
+  game: { file: 'musica-partida', volume: 0.22 },
+});
+
+let music = null;
+let musicFile = null;
+let track = null;
+
+// La pista que corresponde a la pantalla: 'menu', 'game' o null para ninguna
+export function setMusic(key) {
+  track = key;
+  syncMusic();
+}
+
+export function setMusicOn(value) {
+  setPreference('music', value);
+  syncMusic();
+}
+
+// Suena si hay pista, ni el sonido ni la música están apagados y la pestaña está a la vista
+// (en el celular, un <audio> sigue sonando con la pantalla en otra app si no se pausa)
+function syncMusic() {
+  const wanted = MUSIC[track];
+  const audible = wanted && extension && !isMuted() && getPreference('music') && document.visibilityState !== 'hidden';
+  if (!audible) {
+    music?.pause();
+    return;
+  }
+  const url = urlOf(wanted.file);
+  if (!url) return;
+  music ??= Object.assign(new Audio(), { loop: true, preload: 'auto' });
+  if (musicFile !== wanted.file) {
+    music.src = url;
+    musicFile = wanted.file;
+  }
+  music.volume = wanted.volume;
+  // Antes del primer toque el navegador no deja sonar: se reintenta en cada toque
+  if (music.paused) music.play().catch(() => {});
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', syncMusic);
+  addEventListener('pointerdown', syncMusic);
+  addEventListener('keydown', syncMusic);
+}
