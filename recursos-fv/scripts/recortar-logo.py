@@ -45,3 +45,15 @@ apple = Image.new('RGBA', (180, 180), (0x12, 0x0d, 0x0a, 255))
 apple.alpha_composite(square.resize((160, 160), Image.LANCZOS), (10, 10))
 apple.convert('RGB').save('src/assets/images/shared/icono-apple.png', optimize=True)
 print('iconos listos')
+
+# Imagen para compartir el enlace (WhatsApp, redes): el banner con el logo en su tercio
+# izquierdo, el más oscuro, como en "Acerca del juego". 1200x630 en JPEG, que leen todos.
+banner = Image.open('recursos-fv/graficos/escenarios/banner - Dados andina bajo luz de cantina.png').convert('RGB')
+scale = max(1200 / banner.width, 630 / banner.height)
+banner = banner.resize((round(banner.width * scale), round(banner.height * scale)), Image.LANCZOS)
+left, top = (banner.width - 1200) // 2, (banner.height - 630) // 2
+share = banner.crop((left, top, left + 1200, top + 630)).convert('RGBA')
+mark = logo.resize((390, round(logo.height * 390 / logo.width)), Image.LANCZOS)
+share.alpha_composite(mark, (48, (630 - mark.height) // 2))
+share.convert('RGB').save('public/compartir.jpg', quality=85, optimize=True)
+print('public/compartir.jpg', share.size)

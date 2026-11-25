@@ -79,3 +79,7 @@ para que el bucle no tenga hueco. El volumen de cada pista va en la tabla `MUSIC
 | --- | --- | --- |
 | `musica-menu` | "Cantina de Noche", hecha por Flavio con Suno (70 bpm) | Según el plan de Suno con que se generó: revisar antes de publicar o aceptar donaciones |
 | `musica-partida` | Hecha por Flavio con ElevenLabs Music (70 bpm) | Según el plan de ElevenLabs: revisar antes de publicar o aceptar donaciones |
+
+## Íconos de contacto
+
+`images/shared/icono-gmail.webp` e `icono-instagram.webp`: los íconos blancos que pasó Flavio (`recursos-fv/graficos/iconos/`), recortados y reducidos a 96 px.

@@ -1,0 +1,16 @@
+# Despliegue en Render (plan gratis): un solo servicio que compila el juego y lo sirve junto
+# con las salas online. Render lee este archivo al crear el servicio como "Blueprint" y vuelve
+# a desplegar solo en cada push a main.
+services:
+  - type: web
+    name: gran-quispe
+    runtime: node
+    plan: free
+    branch: main
+    autoDeploy: true
+    # Vite y Vitest son devDependencies: hay que instalarlas para compilar
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

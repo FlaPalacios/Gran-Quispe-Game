@@ -528,16 +528,35 @@ p {
 }
 
 .about__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  gap: 0.25rem;
   list-style: none;
 }
 
-.about__links a {
+/* Contacto discreto: el ícono blanco y el texto, sin botón; alto táctil completo */
+.about__link {
   display: inline-flex;
   align-items: center;
+  gap: 0.6rem;
+  min-height: var(--tactil-min);
+  color: var(--color-texto);
   text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.about__link img {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.about__link:hover span,
+.about__link:hover {
+  text-decoration: underline;
+}
+
+.about__hint {
+  color: var(--color-texto-suave);
+  font-size: 0.9rem;
 }
 
 .about__credits {
@@ -1289,39 +1308,21 @@ p {
   z-index: 2;
 }
 
-/* ---------- Entrada de la partida ---------- */
+/* ---------- Fundido desde negro (src/ui/FadeIn.js) ---------- */
 
-/* Arranca en negro y se abre como un túnel mientras suena la cerveza. El negro no es un
-   fondo: es el borde enorme de un agujero que crece, porque un fondo se pinta por debajo de
-   la imagen y el agujero no destaparía nada. Y el agujero arranca de 2 px, no de cero,
-   porque un elemento sin tamaño no pinta su sombra. */
-.intro {
+/* Un velo del color del fondo que se desvanece: rápido al pasar el celular, lento al empezar */
+.fade-in {
   position: fixed;
   inset: 0;
   z-index: 10;
-  display: grid;
-  place-items: center;
+  background: var(--color-fondo);
   pointer-events: none;
+  animation: apagar-intro 0.3s ease-out forwards;
 }
 
-.intro__hole {
-  width: 2px;
-  height: 2px;
-  margin-top: 6vh;
-  border-radius: 50%;
-  box-shadow: 0 0 0 100vmax var(--color-fondo);
-  animation: abrir-tunel 1.2s ease-in forwards;
-}
-
-@keyframes abrir-tunel {
-  from {
-    width: 2px;
-    height: 2px;
-  }
-  to {
-    width: 230vmax;
-    height: 230vmax;
-  }
+.fade-in--slow {
+  animation-duration: 1s;
+  animation-timing-function: ease-in-out;
 }
 
 @keyframes apagar-intro {
@@ -1330,17 +1331,8 @@ p {
   }
 }
 
-/* Sin animaciones: el túnel se cambia por un fundido corto, y el Quispe solo cambia de color */
+/* Sin animaciones: el Quispe solo cambia de color (el fundido se queda: no es movimiento) */
 @media (prefers-reduced-motion: reduce) {
-  .intro {
-    background: var(--color-fondo);
-    animation: apagar-intro 0.4s linear forwards;
-  }
-
-  .intro__hole {
-    display: none;
-  }
-
   .keypad__quispe.is-now {
     animation: none;
   }

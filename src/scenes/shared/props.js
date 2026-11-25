@@ -45,12 +45,17 @@ const FELT = { x: 0.5067, y: 0.5188, width: 0.7975, height: 0.4957 };
 // para las poses inclinadas. Su borde de abajo al centro es el punto donde se apoya en la mesa.
 const CUP_CANVAS = { ratio: 804 / 545, bodyWidth: 381 / 804, bodyHeight: 531 / 545 };
 const DIE_RATIO = 361 / 404;
+// Cuánto más ancha que la escena puede ser la mesa: con el paño al 80 %, queda en el 96 %
+const TABLE_OVERFLOW = 1.2;
 
 // Medidas de la mesa redonda apoyada en la parte baja de un área, centrada en ella.
 // Cálculo puro y aparte del dibujo para que la escena coloque personaje, cubilete y dados
 // en proporción a la mesa sin repetir estos números.
 function roundTableGeometry(area) {
-  const height = Math.min(area.height * 0.42, (area.width * 0.9) / TABLE_RATIO);
+  // Lo más grande que quepa: la mesa, el cubilete y los dados son lo que se mira en el juego.
+  // Puede pasarse un poco de los costados (se corta el canto de madera), pero el paño, que
+  // ocupa el 80 % del ancho, queda siempre entero dentro de la escena.
+  const height = Math.min(area.height * 0.5, (area.width * TABLE_OVERFLOW) / TABLE_RATIO);
   const width = height * TABLE_RATIO;
   const x = area.x + area.width / 2;
   const y = area.y + area.height - height * 0.52;
@@ -91,7 +96,7 @@ export function tableProps(area) {
   // Grandes a propósito: en celular, con dados chicos no se leen los puntos. El paño es
   // bastante achatado, así que el tope de cuánto pueden crecer es el alto, no el ancho.
   const diceSize = body * 0.68;
-  const peekSize = body * 0.42;
+  const peekSize = body * 0.6;
 
   return {
     ...table,

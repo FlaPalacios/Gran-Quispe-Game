@@ -9,7 +9,7 @@ import { CallKeypad } from './CallKeypad.js';
 import { CallSheet, GameHud } from './GameHud.js';
 import { AboutScreen } from './AboutScreen.js';
 import { HowToPlay } from './HowToPlay.js';
-import { PlayIntro } from './PlayIntro.js';
+import { FadeIn } from './FadeIn.js';
 import { stopClock } from './PressureClock.js';
 import { MainMenu } from './MainMenu.js';
 import { Lobby, OnlineMenu } from './OnlineScreens.js';
@@ -80,9 +80,16 @@ export function mountApp(root, store, stage) {
     render();
   });
 
-  // Entrada al empezar una partida: la pantalla se abre como un túnel mientras suena la
-  // cerveza. Va fuera de root porque redibujar lo borraría a media animación.
-  store.onSignal((name) => name === 'gameStart' && document.body.append(PlayIntro()));
+  // Fundidos desde negro. Van fuera de root porque redibujar los borraría a media animación.
+  // Al empezar la partida, lento, mientras suena la cerveza; al pasar el celular (y al volver
+  // a la mesa tras la pantalla de pase), rápido. Con bots o en línea no hay pase, así que la
+  // mesa no parpadea en cada turno.
+  store.onSignal((name) => name === 'gameStart' && document.body.append(FadeIn({ slow: true })));
+  let passKey = null;
+  const fadeOnPass = (key) => {
+    if (passKey !== null && key !== passKey) document.body.append(FadeIn());
+    passKey = key;
+  };
 
   // Que las tarjetas se plieguen o no cambia el HTML, no solo su tamaño. Se redibuja solo
   // cuando eso cambia: en cada resize sería tirar el número a medio escribir en el teclado.
@@ -104,6 +111,7 @@ export function mountApp(root, store, stage) {
     stopClock();
     const snapshot = store.get();
     setMusic(snapshot.game ? 'game' : 'menu');
+    if (!snapshot.game) passKey = null;
     if (snapshot.game) {
       root.replaceChildren(...gameView(snapshot));
     } else if (screen === 'lobby' && lobby) {
@@ -162,8 +170,10 @@ export function mountApp(root, store, stage) {
 
   function gameView(snapshot) {
     const { game } = snapshot;
+    const passing = needsPassScreen(snapshot);
+    fadeOnPass(passing ? `pase:${game.currentPlayerId}` : 'mesa');
     // Mientras se pasa el celular no se dibuja el HUD: ni el reloj corre ni se ve nada del turno
-    if (needsPassScreen(snapshot)) {
+    if (passing) {
       const current = game.players.find((p) => p.id === game.currentPlayerId);
       return [PassDeviceScreen({ name: current.name, onReady: () => store.confirmViewer(current.id) })];
     }

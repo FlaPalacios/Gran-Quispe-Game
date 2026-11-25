@@ -2,13 +2,18 @@
 // El detalle de cada asset (archivo por archivo y su licencia) está en recursos-fv/creditos.md;
 // aquí va lo que hay que nombrar en pantalla.
 import bannerUrl from '../assets/images/shared/banner.webp';
+import gmailIcon from '../assets/images/shared/icono-gmail.webp';
+import instagramIcon from '../assets/images/shared/icono-instagram.webp';
 import logoUrl from '../assets/images/shared/logo.webp';
 import { t } from '../i18n/index.js';
 import { card, screen } from './RulesPanel.js';
 import { h } from './dom.js';
 
-// Redes y contacto de Flavio: { label, url }. La tarjeta no se muestra mientras esté vacía.
-const CONTACT_LINKS = [];
+// Contacto de Flavio: el correo sirve también para avisar de errores (llega con el asunto puesto)
+const CONTACT_LINKS = [
+  { icon: gmailIcon, label: 'flavioalejandro99@gmail.com', url: 'mailto:flavioalejandro99@gmail.com?subject=Gran%20Quispe' },
+  { icon: instagramIcon, label: '@flaviopr_', url: 'https://www.instagram.com/flaviopr_/' },
+];
 
 // Créditos en pantalla: clave de i18n de qué se hizo y con qué
 const CREDITS = ['art', 'music', 'voices', 'sounds', 'fonts', 'code'];
@@ -28,14 +33,23 @@ export function AboutScreen({ onBack }) {
       card(
         t('about.author'),
         h('p', {}, t('about.author.text')),
-        CONTACT_LINKS.length > 0 &&
-          h(
-            'ul',
-            { class: 'about__links' },
-            CONTACT_LINKS.map(({ label, url }) =>
-              h('li', {}, h('a', { class: 'btn btn--light btn--small', href: url, target: '_blank', rel: 'noopener' }, label)),
+        h('p', { class: 'about__hint' }, t('about.contact')),
+        h(
+          'ul',
+          { class: 'about__links' },
+          CONTACT_LINKS.map(({ icon, label, url }) =>
+            h(
+              'li',
+              {},
+              h(
+                'a',
+                { class: 'about__link', href: url, target: '_blank', rel: 'noopener' },
+                h('img', { src: icon, alt: '', width: '22', height: '22' }),
+                label,
+              ),
             ),
           ),
+        ),
       ),
       card(
         t('about.credits'),

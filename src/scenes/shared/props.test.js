@@ -35,10 +35,11 @@ describe('tableProps', () => {
         const table = tableProps(area);
         const { felt, cup, dice } = table;
 
-        it('la mesa se apoya abajo y cabe en la zona de la escena', () => {
+        it('la mesa se apoya abajo y su paño cabe entero en la zona de la escena', () => {
           expect(table.x).toBeCloseTo(area.x + area.width / 2, 5);
-          expect(table.x - table.width / 2).toBeGreaterThanOrEqual(area.x);
-          expect(table.x + table.width / 2).toBeLessThanOrEqual(area.x + area.width);
+          // El canto de madera puede cortarse por los costados; el paño, no
+          expect(felt.x - felt.width / 2).toBeGreaterThanOrEqual(area.x);
+          expect(felt.x + felt.width / 2).toBeLessThanOrEqual(area.x + area.width);
           expect(table.y + table.height / 2).toBeLessThanOrEqual(area.y + area.height);
           expect(table.top).toBeGreaterThanOrEqual(area.y);
         });

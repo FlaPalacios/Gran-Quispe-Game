@@ -81,7 +81,11 @@ Capa de UI ──acciones y estado──▶ Motor de reglas ◀──jugadas─�
 
 **Reacciones en línea (`src/ui/Reactions.js`):** un botón de la barra superior abre cuatro stickers (`reaccion-*.webp`). El servidor los reparte a toda la sala (`react` en `rooms.js`, uno cada 2 s por asiento, solo los de su lista `REACTIONS`) y cada celular los muestra un momento sobre la escena con el nombre de quien lo mandó.
 
-**Acerca del juego (`src/ui/AboutScreen.js`):** desde el enlace bajo los botones del menú. El banner (`banner.webp`) con el logo encima, quién lo hizo, sus redes (`CONTACT_LINKS`, la tarjeta se oculta mientras esté vacía) y los créditos en pantalla; el detalle archivo por archivo sigue en `recursos-fv/creditos.md`.
+**Acerca del juego (`src/ui/AboutScreen.js`):** desde el enlace bajo los botones del menú. El banner (`banner.webp`) con el logo encima, quién lo hizo, su contacto (`CONTACT_LINKS`: el Gmail, que sirve también para avisar de errores, y el Instagram, con sus íconos blancos) y los créditos en pantalla; el detalle archivo por archivo sigue en `recursos-fv/creditos.md`.
+
+**Fundidos (`src/ui/FadeIn.js`):** un velo del color del fondo que se desvanece. Al empezar la partida (señal `gameStart`) dura 1 s; al aparecer la pantalla de pase, cambiar de jugador en ella o volver a la mesa, 0,3 s. `app.js` lo decide con una clave de "qué se ve" (`pase:<jugador>` o `mesa`), así que con bots o en línea, donde no hay pase, la mesa no parpadea en cada turno.
+
+**Despliegue (`render.yaml`):** un solo servicio web gratis en Render que compila (`npm ci --include=dev && npm run build`) y arranca `node server/index.js`, con despliegue automático en cada push a `main`. El servidor está preparado para eso: comprime en gzip el JS y el CSS (una vez por archivo; Phaser baja de 1,2 MB a ~320 KB), guarda en caché del navegador para siempre lo de `assets/` (lleva hash) y nunca `index.html`, responde por rangos (Safari los pide para la música) y cambia `__SITE_URL__` de `index.html` por la dirección real, para la vista previa al compartir (`public/compartir.jpg`, 1200x630, armada por `recortar-logo.py`). En el plan gratis el servicio se apaga tras 15 min sin uso y tarda cerca de un minuto en despertar; las partidas en curso lo mantienen despierto.
 
 **Menú, nueva partida y Configuración:** el menú tiene su propio fondo en CSS (`menu-fondo-vertical` en celular y `-horizontal` en PC), con la lámpara y la repisa arriba y el logo y los botones apoyados abajo. el botón Jugar abre un panel corto (jugadores, modo y escenario). Las variantes de reglas y las preferencias de pantalla y sonido van aparte, en Configuración desde el menú: lo elegido se guarda (`preferences.js`, clave `variants`) y vale para las partidas siguientes, también al crear una sala online. La nueva partida nombra al pie qué reglas extra están puestas. "Cómo se juega" (`src/ui/HowToPlay.js`) explica lo esencial en cuatro tarjetas. En la partida, el HUD muestra lo cantado en la ronda (desde la segunda jugada) en una tira encima del panel de turno.
 
@@ -146,7 +150,7 @@ src/
   ui/                  # app.js (enrutador), MainMenu, RulesPanel, PassDeviceScreen, GameHud, styles.css
     CallKeypad.js      # teclado para cantar (por defecto); CallSheet es la lista completa
     PressureClock.js   # el reloj, compartido por el panel de turno y el teclado
-    PlayIntro.js       # entrada en túnel al empezar la partida
+    FadeIn.js          # fundido desde negro: lento al empezar la partida, rápido al pasar el celular
     HowToPlay.js       # "Cómo se juega": lo esencial en pocas líneas
     AboutScreen.js     # "Acerca del juego": banner, autor, redes y créditos
     Reactions.js       # stickers del modo online
@@ -321,7 +325,8 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 - [x] Pantalla "Acerca del juego" con el banner y los créditos (faltan las redes de Flavio)
 - [x] Fondo nuevo del menú y reacciones rápidas en línea
 - [x] Favicon (el cubilete del logo) y logo sólido bajo la lámpara del menú
-- [ ] Imagen para compartir el enlace (el banner ya está; WhatsApp pide una URL completa, así que va al subir el juego a un hosting)
+- [x] Imagen para compartir el enlace, fundidos al pasar el celular, mesa y dados más grandes, contacto en Acerca del juego
+- [ ] Subirlo a Render (`render.yaml` listo) y botón de reseñas con un formulario de Google
 - [ ] Inglés y términos en quechua, con selector de idioma
 - [x] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular (en la laptop; falta subirlo a un hosting)
 
