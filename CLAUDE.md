@@ -41,8 +41,8 @@ Requiere Node 22.12 o superior.
 | Tests | Vitest, solo para `src/engine/` y `src/storage/` |
 | Guardado | localStorage con marca de tiempo, expira a la hora |
 | Backend | Solo para el modo online: `server/` (Node + Socket.IO), sin base de datos ni cuentas; las salas viven en memoria |
-| Hosting | Diferido (primero funcional en local). Luego un hosting estático gratuito |
-| Modo online | Node.js + Socket.IO reutilizando `src/engine/`, `gameStore` y los bots sin reescribirlos. Por ahora corre en la laptop de Flavio; subirlo a un hosting gratis queda para después |
+| Hosting | Render, plan gratis: https://gran-quispe.onrender.com (Blueprint `Gran-Quispe`, `render.yaml`); se publica solo en cada push a `main` |
+| Modo online | Node.js + Socket.IO reutilizando `src/engine/`, `gameStore` y los bots sin reescribirlos. Corre en Render junto con el juego; en local, con `npm run online` |
 
 ## Arquitectura
 
@@ -326,9 +326,9 @@ Assets creados por Flavio (ChatGPT para los gráficos, Kenney para los sonidos);
 - [x] Fondo nuevo del menú y reacciones rápidas en línea
 - [x] Favicon (el cubilete del logo) y logo sólido bajo la lámpara del menú
 - [x] Imagen para compartir el enlace, fundidos al pasar el celular, mesa y dados más grandes, contacto en Acerca del juego
-- [ ] Subirlo a Render (`render.yaml` listo) y botón de reseñas con un formulario de Google
+- [x] Publicado en Render (2026-11-24) y enlace "Dejar una reseña" al pie del menú, hacia un formulario de Google (`REVIEW_FORM_URL` en `MainMenu.js`)
 - [ ] Inglés y términos en quechua, con selector de idioma
-- [x] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular (en la laptop; falta subirlo a un hosting)
+- [x] Modo online: servidor Node + WebSockets reutilizando `src/engine/`, cada jugador desde su celular (en Render)
 
 ## Riesgos
 

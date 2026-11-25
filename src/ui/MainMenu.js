@@ -4,6 +4,10 @@ import { t } from '../i18n/index.js';
 import { SoundToggle } from './SoundToggle.js';
 import { h } from './dom.js';
 
+// Formulario de Google para dejar una reseña (las respuestas le llegan a Flavio)
+const REVIEW_FORM_URL =
+  'https://docs.google.com/forms/d/e/1FAIpQLSfBtfj6YqjdaPO_xjqGo15DyvepB0FS6tb7b5lQBKF_QoxndA/viewform';
+
 export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, onSettings, onAbout, onRefresh }) {
   return h(
     'main',
@@ -29,7 +33,13 @@ export function MainMenu({ canContinue, onContinue, onPlay, onOnline, onHowTo, o
         h('button', { class: 'btn btn--light btn--small', onClick: onHowTo }, t('menu.howto')),
         h('button', { class: 'btn btn--light btn--small', onClick: onSettings }, t('menu.settings')),
       ),
-      h('button', { class: 'menu__link', onClick: onAbout }, t('menu.about')),
+      // Dos enlaces discretos al pie: quién lo hizo y dejar una reseña (en otra pestaña)
+      h(
+        'div',
+        { class: 'menu__links' },
+        h('button', { class: 'menu__link', onClick: onAbout }, t('menu.about')),
+        h('a', { class: 'menu__link', href: REVIEW_FORM_URL, target: '_blank', rel: 'noopener' }, t('menu.review')),
+      ),
     ),
   );
 }

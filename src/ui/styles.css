@@ -274,8 +274,15 @@ p {
 }
 
 /* Acerca del juego: un enlace discreto debajo de los botones, con alto táctil completo */
+.menu__links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .menu__link {
-  justify-self: center;
+  display: inline-flex;
+  align-items: center;
   min-height: var(--tactil-min);
   padding: 0 1rem;
   border: 0;
