@@ -1,21 +1,22 @@
 // Enrutador de la capa HTML: menú → configuración → partida.
 import { playSfx, setMusic } from '../app/audio.js';
 import { needsPassScreen } from '../app/gameStore.js';
+import { momentViewer, roundMoment } from '../app/moment.js';
 import { createOnline } from '../app/online.js';
 import { getPreference } from '../app/preferences.js';
-import { t } from '../i18n/index.js';
 import { loadGame } from '../storage/localSave.js';
 import { CallKeypad } from './CallKeypad.js';
 import { CallSheet, GameHud } from './GameHud.js';
 import { AboutScreen } from './AboutScreen.js';
 import { HowToPlay } from './HowToPlay.js';
 import { FadeIn } from './FadeIn.js';
+import { showRoundMoment } from './RoundMoment.js';
 import { stopClock } from './PressureClock.js';
 import { MainMenu } from './MainMenu.js';
 import { Lobby, OnlineMenu } from './OnlineScreens.js';
 import { PassDeviceScreen } from './PassDeviceScreen.js';
 import { showReaction } from './Reactions.js';
-import { RulesPanel, defaultDraft } from './RulesPanel.js';
+import { RulesPanel, defaultDraft, draftToSetup } from './RulesPanel.js';
 
 export function mountApp(root, store, stage) {
   let screen = 'menu';
@@ -27,11 +28,12 @@ export function mountApp(root, store, stage) {
   let playersOpen = false;
   let reactionsOpen = false;
 
-  // Modo online: lo escrito en la pantalla de entrar, si la configuración crea una sala y
-  // cómo está la sala de espera
+  // Modo online: lo escrito en la pantalla de entrar y cómo está la sala de espera
   const onlineForm = { name: '', code: '', error: null, busy: false };
-  let creatingRoom = false;
   let lobby = null;
+  // El castigo que escribe quien creó la sala: vive aquí para que un aviso de la sala (alguien
+  // que entra) no lo borre a medio escribir. Se manda al servidor al tocar Empezar.
+  const lobbyDraft = { penaltyText: null };
   const online = createOnline(store, {
     onLobby: (next) => {
       lobby = next;
@@ -44,6 +46,7 @@ export function mountApp(root, store, stage) {
     },
     onLost: (code) => {
       lobby = null;
+      lobbyDraft.penaltyText = null;
       onlineForm.error = code;
       screen = 'online';
       render();
@@ -72,13 +75,34 @@ export function mountApp(root, store, stage) {
   const leaveRoom = (next = 'menu') => {
     online.leave();
     lobby = null;
+    lobbyDraft.penaltyText = null;
     go(next);
   };
 
-  store.subscribe(() => {
+  store.subscribe((snapshot) => {
     callSheetOpen = false;
+    followMoment(snapshot);
     render();
   });
+
+  // El momento del final de ronda sale cuando el resultado se hace visible: al terminar de
+  // subir el cubilete o, sin destape, al instante. No al retomar una partida ya terminada en
+  // esa ronda, y se cierra solo si la partida sigue antes de que termine.
+  let lastSnapshot = null;
+  let moment = null;
+  const resultShown = (s) => Boolean(s?.game?.round.result) && !s.revealing;
+  function followMoment(snapshot) {
+    const before = lastSnapshot;
+    lastSnapshot = snapshot;
+    if (!resultShown(snapshot)) {
+      moment?.close();
+      moment = null;
+      return;
+    }
+    if (!before?.game || resultShown(before)) return;
+    moment?.close();
+    moment = showRoundMoment(roundMoment(snapshot.game, momentViewer(snapshot)), snapshot.game.config.mode);
+  }
 
   // Fundidos desde negro. Van fuera de root porque redibujar los borraría a media animación.
   // Al empezar la partida, lento, mientras suena la cerveza; al pasar el celular (y al volver
@@ -116,17 +140,33 @@ export function mountApp(root, store, stage) {
       root.replaceChildren(...gameView(snapshot));
     } else if (screen === 'lobby' && lobby) {
       root.replaceChildren(
-        Lobby({ lobby, error: onlineForm.error, onLeave: () => leaveRoom('online'), onStart: () => request(online.start) }),
+        Lobby({
+          lobby,
+          busy: onlineForm.busy,
+          error: onlineForm.error,
+          onLeave: () => leaveRoom('online'),
+          draft: lobbyDraft,
+          onStart: () =>
+            request(async () => {
+              const text = lobbyDraft.penaltyText?.trim();
+              if (text != null && text !== (lobby.config.penaltyText ?? '')) {
+                await online.configure({ ...lobby.config, penaltyText: text });
+              }
+              return online.start();
+            }),
+          onConfigure: (config) => request(() => online.configure(config)),
+          onAddBot: (personality, name) => request(() => online.addBot(personality, name)),
+          onRemove: (seatId) => request(() => online.removeSeat(seatId)),
+        }),
       );
     } else if (screen === 'online') {
       root.replaceChildren(
         OnlineMenu({
           form: onlineForm,
           onBack: () => go('menu'),
-          onCreate: () => {
-            creatingRoom = true;
-            go('setup');
-          },
+          // La sala se crea al toque con tus reglas de siempre (modo, escenario y las variantes
+          // de Configuración); dentro se cambian y se suman los bots
+          onCreate: () => request(() => online.create(onlineForm.name.trim(), draftToSetup(draft).config)),
           onJoin: () => request(() => online.join(onlineForm.code.trim(), onlineForm.name.trim())),
         }),
       );
@@ -138,16 +178,7 @@ export function mountApp(root, store, stage) {
       root.replaceChildren(RulesPanel({ draft, settings: true, onBack: () => go('menu') }));
     } else if (screen === 'setup') {
       root.replaceChildren(
-        RulesPanel({
-          draft,
-          onBack: () => go(creatingRoom ? 'online' : 'menu'),
-          startLabel: creatingRoom ? t('online.create') : undefined,
-          // En línea, los asientos de persona que no son el tuyo los ocupa quien entre con el código
-          onStart: (setup) =>
-            creatingRoom
-              ? request(() => online.create(setup, setup.players.find((p) => !p.isBot)?.name))
-              : store.start(setup),
-        }),
+        RulesPanel({ draft, onBack: () => go('menu'), onStart: (setup) => store.start(setup) }),
       );
     } else {
       const saved = loadGame();
@@ -228,10 +259,7 @@ export function mountApp(root, store, stage) {
     ];
   }
 
-  function startSetup() {
-    creatingRoom = false;
-    go('setup');
-  }
+  const startSetup = () => go('setup');
 
   function go(next, action) {
     screen = next;

@@ -138,6 +138,9 @@ io.on('connection', (socket) => {
   handle('create', rooms.create);
   handle('join', rooms.join);
   handle('rejoin', rooms.rejoin);
+  handle('configure', rooms.configure);
+  handle('addBot', rooms.addBot);
+  handle('removeSeat', rooms.removeSeat);
   handle('start', rooms.start);
   handle('action', rooms.action);
   handle('shake', rooms.shake);

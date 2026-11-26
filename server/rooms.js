@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { connectBots } from '../src/app/botPlayer.js';
 import { createGameStore } from '../src/app/gameStore.js';
 import { PERSONALITIES, botAction } from '../src/engine/bots.js';
-import { MAX_PLAYERS, PHASES, createGame, viewFor } from '../src/engine/rules.js';
+import { MAX_PLAYERS, MIN_PLAYERS, PHASES, createGame, viewFor } from '../src/engine/rules.js';
 
 // Sin I ni O, para que no se confundan con 1 y 0 al dictar el código
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -39,6 +39,8 @@ export class RoomError extends Error {
 }
 
 const cleanName = (name) => (typeof name === 'string' ? name.trim().slice(0, NAME_MAX) : '');
+// Dos asientos no pueden llamarse igual (sin mirar mayúsculas): en la mesa se confundirían
+const sameName = (a, b) => a.toLowerCase() === b.toLowerCase();
 const newToken = () => randomBytes(12).toString('hex');
 
 // Un error dentro de un temporizador tumbaría el proceso y con él todas las salas
@@ -67,6 +69,8 @@ export function createRooms({ send, rng = secureRandom }) {
   const lobbyOf = (room) => ({
     code: room.code,
     started: Boolean(room.store.get().game),
+    config: room.config,
+    maxPlayers: MAX_PLAYERS,
     seats: room.seats.map(({ id, name, isBot, personality, socketId, connected }) => ({
       id,
       name,
@@ -115,6 +119,7 @@ export function createRooms({ send, rng = secureRandom }) {
   }
 
   // Suelta el asiento de un socket. `quit`: salió a propósito, así que el suplente entra ya.
+  // En la sala de espera, quien sale a propósito deja libre su lugar (salvo quien la creó).
   function release(socketId, { quit = false } = {}) {
     const room = rooms.get(roomOfSocket.get(socketId));
     roomOfSocket.delete(socketId);
@@ -122,6 +127,16 @@ export function createRooms({ send, rng = secureRandom }) {
     if (!seat) return;
     seat.socketId = null;
     seat.connected = false;
+    if (quit && !room.store.get().game) {
+      // Salió de la sala de espera: libera su lugar. Si era quien la creó, la sala pasa a la
+      // siguiente persona (para que nadie quede atrapado); si no queda nadie, se cierra.
+      room.seats.splice(room.seats.indexOf(seat), 1);
+      if (seat.id === room.hostId) {
+        const heir = room.seats.find((s) => !s.isBot && s.socketId) ?? room.seats.find((s) => !s.isBot);
+        if (!heir) return destroy(room);
+        room.hostId = heir.id;
+      }
+    }
     if (room.store.get().game) {
       // Se le guarda el asiento un rato; si no vuelve, juega un bot por él
       const takeOver = () => {
@@ -183,47 +198,46 @@ export function createRooms({ send, rng = secureRandom }) {
     rooms.delete(room.code);
   }
 
-  function validSetup(setup) {
-    const players = setup?.players;
-    if (!Array.isArray(players) || players.length > MAX_PLAYERS) return false;
-    if (typeof setup.config?.penaltyText === 'string' && setup.config.penaltyText.length > PENALTY_MAX) return false;
-    if (players.some((p) => p?.isBot && !Object.hasOwn(PERSONALITIES, p.personality))) return false;
-    if (!players.some((p) => !p?.isBot)) return false;
-    // Lo demás lo valida el motor; mejor descubrirlo ahora que al empezar
+  // La configuración de reglas que manda quien creó la sala, ya limpia (solo los campos que
+  // conoce el motor) o null si no sirve. La valida el motor con dos jugadores de prueba:
+  // mejor descubrir ahora que algo no sirve que al empezar.
+  function cleanConfig(config) {
+    if (typeof config !== 'object' || config === null) return null;
+    if (typeof config.penaltyText === 'string' && config.penaltyText.length > PENALTY_MAX) return null;
     try {
-      createGame(setup, { rng });
-      return true;
+      return createGame({ config, players: [{ id: 'a', name: 'a' }, { id: 'b', name: 'b' }] }, { rng }).config;
     } catch {
-      return false;
+      return null;
     }
   }
 
+  const nameTaken = (room, name) => room.seats.some((s) => sameName(s.name, name));
+
+  // Acciones de la sala de espera: solo quien la creó y antes de empezar
+  function hostLobby(socketId) {
+    const room = roomOf(socketId);
+    if (seatOf(room, socketId)?.id !== room.hostId) throw new RoomError('NOT_HOST');
+    if (room.store.get().game) throw new RoomError('STARTED');
+    return room;
+  }
+
+  function addSeat(room, fields) {
+    if (room.seats.length >= MAX_PLAYERS) throw new RoomError('FULL');
+    const seat = { id: `p${room.nextSeat++}`, token: newToken(), socketId: null, connected: false, isBot: false, personality: null, ...fields };
+    room.seats.push(seat);
+    return seat;
+  }
+
   return {
-    // `setup` es lo que arma el panel de configuración. El primer asiento de persona es
-    // de quien crea la sala; los demás de persona quedan libres para quien entre con el código.
-    create(socketId, { setup, name } = {}) {
-      if (!validSetup(setup)) throw new RoomError('BAD_SETUP');
-      release(socketId); // un socket ocupa un solo asiento: si ya tenía uno, lo suelta
-      const { players } = setup;
-      const host = players.find((p) => !p.isBot);
+    // Se crea la sala solo con quien la crea. La configuración (`config`: modo, escenario,
+    // variantes) se cambia dentro, igual que los bots; las personas entran con el código.
+    create(socketId, { name, config: rawConfig } = {}) {
+      const config = cleanConfig(rawConfig);
+      if (!config) throw new RoomError('BAD_SETUP');
+      release(socketId, { quit: true }); // un socket ocupa un solo asiento: si ya tenía uno, sale de él
 
       const store = createGameStore({ rng, save: () => {}, clear: () => {}, autoViewer: true });
-      const room = {
-        code: newCode(),
-        config: setup.config,
-        hostId: `p${players.indexOf(host) + 1}`,
-        store,
-        lastShakeAt: 0,
-        seats: players.map((p, i) => ({
-          id: `p${i + 1}`,
-          name: p.isBot ? cleanName(p.name) : '',
-          isBot: Boolean(p.isBot),
-          personality: p.isBot ? p.personality : null,
-          token: newToken(),
-          socketId: null,
-          connected: false,
-        })),
-      };
+      const room = { code: newCode(), config, hostId: 'p1', nextSeat: 1, store, lastShakeAt: 0, seats: [] };
       room.stopBots = connectBots(store, { rng });
       store.subscribe(() => {
         broadcastState(room);
@@ -236,9 +250,7 @@ export function createRooms({ send, rng = secureRandom }) {
       });
       rooms.set(room.code, room);
 
-      const seat = room.seats.find((s) => s.id === room.hostId);
-      seat.name = cleanName(name) || cleanName(host.name) || 'Anfitrión';
-      const result = sit(room, seat, socketId);
+      const result = sit(room, addSeat(room, { name: cleanName(name) || 'Anfitrión' }), socketId);
       broadcastLobby(room);
       return result;
     },
@@ -246,11 +258,14 @@ export function createRooms({ send, rng = secureRandom }) {
     join(socketId, { code, name } = {}) {
       const room = rooms.get(String(code ?? '').toUpperCase());
       if (!room) throw new RoomError('NO_ROOM');
+      // Un doble toque en Unirse: ya está sentado aquí
+      const already = seatOf(room, socketId);
+      if (already) return { code: room.code, playerId: already.id, token: already.token };
+      const wanted = cleanName(name);
       if (room.store.get().game) {
         // Empezada la partida, solo vuelve quien ya jugaba en ella y salió: con su mismo nombre.
         // shortcut: entre amigos basta el nombre; para una sala pública haría falta algo más.
-        const wanted = cleanName(name).toLowerCase();
-        const back = room.seats.find((s) => !s.isBot && !s.socketId && wanted && s.name.toLowerCase() === wanted);
+        const back = room.seats.find((s) => !s.isBot && !s.socketId && wanted && sameName(s.name, wanted));
         if (!back) throw new RoomError('STARTED');
         release(socketId);
         back.token = newToken();
@@ -259,16 +274,46 @@ export function createRooms({ send, rng = secureRandom }) {
         broadcastState(room);
         return result;
       }
-      // El asiento de quien creó la sala es suyo aunque se le corte un momento la conexión
-      const seat = room.seats.find((s) => !s.isBot && !s.socketId && s.id !== room.hostId);
-      if (!seat) throw new RoomError('FULL');
-      release(socketId);
-      seat.name = cleanName(name) || `Jugador ${seat.id.slice(1)}`;
-      // Token nuevo: quien ocupó antes este asiento ya no puede volver a él
-      seat.token = newToken();
-      const result = sit(room, seat, socketId);
+      if (room.seats.length >= MAX_PLAYERS) throw new RoomError('FULL');
+      // Sin nombre, el primer "Jugador N" libre: no se le rechaza por un nombre que no eligió
+      let seatName = wanted;
+      for (let n = room.seats.length + 1; !seatName; n++) if (!nameTaken(room, `Jugador ${n}`)) seatName = `Jugador ${n}`;
+      if (nameTaken(room, seatName)) throw new RoomError('NAME_TAKEN');
+      release(socketId, { quit: true });
+      const result = sit(room, addSeat(room, { name: seatName }), socketId);
       broadcastLobby(room);
       return result;
+    },
+
+    // Quien creó la sala cambia las reglas desde dentro
+    configure(socketId, { config } = {}) {
+      const room = hostLobby(socketId);
+      const clean = cleanConfig(config);
+      if (!clean) throw new RoomError('BAD_SETUP');
+      room.config = clean;
+      broadcastLobby(room);
+    },
+
+    addBot(socketId, { personality, name } = {}) {
+      const room = hostLobby(socketId);
+      const botName = cleanName(name);
+      if (!Object.hasOwn(PERSONALITIES, personality) || !botName) throw new RoomError('BAD_SETUP');
+      if (nameTaken(room, botName)) throw new RoomError('NAME_TAKEN');
+      addSeat(room, { name: botName, isBot: true, personality });
+      broadcastLobby(room);
+    },
+
+    // Quitar un bot, o a una persona (que se entera); el asiento de quien creó la sala, no
+    removeSeat(socketId, { seatId } = {}) {
+      const room = hostLobby(socketId);
+      const seat = room.seats.find((s) => s.id === seatId && s.id !== room.hostId);
+      if (!seat) throw new RoomError('NO_SEAT');
+      room.seats.splice(room.seats.indexOf(seat), 1);
+      if (seat.socketId) {
+        roomOfSocket.delete(seat.socketId);
+        send(seat.socketId, 'lost', 'REMOVED');
+      }
+      broadcastLobby(room);
     },
 
     // Volver al asiento tras una desconexión (pantalla bloqueada, se cortó el wifi, recarga)
@@ -290,13 +335,14 @@ export function createRooms({ send, rng = secureRandom }) {
       return result;
     },
 
-    // Solo quien creó la sala, y la primera vez con todos los asientos de persona ocupados.
+    // Solo quien creó la sala, con al menos dos en la mesa y, la primera vez, nadie desconectado.
     // Terminada la partida sirve para jugar otra vez; quien ya no esté lo juega el suplente.
     start(socketId) {
       const room = roomOf(socketId);
       if (seatOf(room, socketId)?.id !== room.hostId) throw new RoomError('NOT_HOST');
       const { game } = room.store.get();
       if (game && game.phase !== PHASES.GAME_OVER) throw new RoomError('STARTED');
+      if (room.seats.length < MIN_PLAYERS) throw new RoomError('NOT_ENOUGH');
       if (!game && room.seats.some((s) => !s.isBot && !s.socketId)) throw new RoomError('SEATS_EMPTY');
       room.store.start({
         config: room.config,

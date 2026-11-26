@@ -78,7 +78,8 @@ export function createOnline(store, { onLobby, onLost, onReaction }) {
   }
 
   return {
-    create: (setup, name) => request('create', { setup, name }).then(remember),
+    // Crear la sala con su nombre y las reglas de partida; los bots y lo demás se ajustan dentro
+    create: (name, config) => request('create', { name, config }).then(remember),
     // Si es la sala de la que salió este mismo celular, vuelve a su asiento con el token; si
     // no, entra como nuevo (o, con la partida empezada, recupera el asiento con su nombre)
     join(code, name) {
@@ -92,6 +93,10 @@ export function createOnline(store, { onLobby, onLost, onReaction }) {
       return request('join', { code, name }).then(remember);
     },
     react: (reaction) => socket?.emit('react', { reaction }),
+    // Solo quien creó la sala, antes de empezar
+    configure: (config) => request('configure', { config }),
+    addBot: (personality, name) => request('addBot', { personality, name }),
+    removeSeat: (seatId) => request('removeSeat', { seatId }),
     // Empezar, o volver a jugar cuando terminó la partida (solo quien creó la sala)
     start: () => request('start'),
 

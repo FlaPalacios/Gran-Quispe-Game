@@ -272,9 +272,13 @@ function endRound(state, result) {
   });
 
   const revealed = revealsDice(variants, result);
+  const loser = state.players.find((p) => p.id === result.loserId);
   const fullResult = {
     ...result,
     cost,
+    // Vidas o letras que tenía antes de perder: el costo puede recortarse en el tope (no se
+    // baja de 0 vidas ni se pasa de 6 letras), así que no se deduce restando
+    scoreBefore: state.config.mode === 'lives' ? loser.lives : loser.letters,
     revealed,
     duel,
     // Sin destape, los dados no se publican en el resultado (siguen en round.dice)

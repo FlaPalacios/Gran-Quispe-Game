@@ -11,24 +11,19 @@ function fakeSockets() {
   return { inbox, send };
 }
 
-const SETUP = {
-  config: { mode: 'classic' },
-  players: [
-    { id: 'p1', name: 'Ana' },
-    { id: 'p2', name: '' },
-    { id: 'p3', name: 'Bot', isBot: true, personality: 'honest' },
-  ],
-};
+const CONFIG = { mode: 'classic' };
 
 describe('salas online', () => {
   afterEach(() => vi.useRealTimers());
 
-  function openRoom() {
+  // Ana crea la sala, Beto entra con el código y Ana suma un bot: p1, p2 y p3
+  function openRoom(config = CONFIG) {
     vi.useFakeTimers();
     const { inbox, send } = fakeSockets();
     const rooms = createRooms({ send, rng: () => 0 }); // abre el primer asiento: Ana
-    const host = rooms.create('s-ana', { setup: SETUP, name: 'Ana' });
+    const host = rooms.create('s-ana', { name: 'Ana', config });
     const guest = rooms.join('s-beto', { code: host.code.toLowerCase(), name: '  Beto  ' });
+    rooms.addBot('s-ana', { personality: 'honest', name: 'Bot' });
     return { inbox, rooms, host, guest };
   }
 
@@ -36,12 +31,72 @@ describe('salas online', () => {
     const { inbox, rooms, host, guest } = openRoom();
     expect(host.code).toMatch(/^[A-Z]{4}$/);
     expect(guest.playerId).toBe('p2');
-    expect(inbox['s-ana'].lobby.seats.map((s) => [s.name, s.taken])).toEqual([['Ana', true], ['Beto', true], ['Bot', true]]);
-    expect(() => rooms.join('s-x', { code: host.code })).toThrow(expect.objectContaining({ code: 'FULL' }));
+    expect(inbox['s-ana'].lobby.seats.map((s) => [s.name, s.taken, s.isBot])).toEqual([
+      ['Ana', true, false],
+      ['Beto', true, false],
+      ['Bot', true, true],
+    ]);
+    // La configuración llega limpia: con lo que completa el motor y sin campos de más
+    expect(inbox['s-beto'].lobby.config).toMatchObject({ mode: 'classic', scenario: 'cantina' });
     expect(() => rooms.start('s-beto')).toThrow(expect.objectContaining({ code: 'NOT_HOST' }));
     rooms.start('s-ana');
     expect(inbox['s-beto'].state.game.currentPlayerId).toBe('p1');
-    expect(() => rooms.join('s-x', { code: host.code })).toThrow(expect.objectContaining({ code: 'STARTED' }));
+    expect(() => rooms.join('s-x', { code: host.code, name: 'Cata' })).toThrow(expect.objectContaining({ code: 'STARTED' }));
+  });
+
+  it('entran hasta 8, sin nombres repetidos', () => {
+    const { rooms, host } = openRoom();
+    expect(() => rooms.join('s-x', { code: host.code, name: 'beto' })).toThrow(expect.objectContaining({ code: 'NAME_TAKEN' }));
+    expect(() => rooms.addBot('s-ana', { personality: 'bluffer', name: 'BOT' })).toThrow(expect.objectContaining({ code: 'NAME_TAKEN' }));
+    for (let i = 4; i <= 8; i++) rooms.join(`s-${i}`, { code: host.code, name: `J${i}` });
+    expect(rooms.get(host.code).seats).toHaveLength(8);
+    expect(() => rooms.join('s-9', { code: host.code, name: 'J9' })).toThrow(expect.objectContaining({ code: 'FULL' }));
+    expect(() => rooms.addBot('s-ana', { personality: 'honest', name: 'Otro' })).toThrow(expect.objectContaining({ code: 'FULL' }));
+  });
+
+  it('dentro de la sala, solo quien la creó cambia reglas, suma o quita asientos', () => {
+    const { inbox, rooms, host } = openRoom();
+    expect(() => rooms.configure('s-beto', { config: { mode: 'lives' } })).toThrow(expect.objectContaining({ code: 'NOT_HOST' }));
+    expect(() => rooms.configure('s-ana', { config: { mode: 'nada' } })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
+    rooms.configure('s-ana', { config: { mode: 'lives', lives: 2, scenario: 'bar' } });
+    expect(inbox['s-beto'].lobby.config).toMatchObject({ mode: 'lives', scenario: 'bar' });
+    expect(() => rooms.addBot('s-ana', { personality: 'toString', name: 'X' })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
+    // Al quitar a una persona, se le avisa
+    rooms.removeSeat('s-ana', { seatId: 'p2' });
+    expect(inbox['s-beto'].lost).toBe('REMOVED');
+    expect(() => rooms.removeSeat('s-ana', { seatId: 'p1' })).toThrow(expect.objectContaining({ code: 'NO_SEAT' }));
+    rooms.removeSeat('s-ana', { seatId: 'p3' });
+    // Sola no se puede empezar
+    expect(() => rooms.start('s-ana')).toThrow(expect.objectContaining({ code: 'NOT_ENOUGH' }));
+    expect(rooms.get(host.code).seats.map((s) => s.id)).toEqual(['p1']);
+  });
+
+  it('quien sale de la sala de espera libera su lugar; si solo se corta, se lo guardan', () => {
+    const { rooms, host, guest } = openRoom();
+    rooms.disconnect('s-beto');
+    expect(rooms.get(host.code).seats).toHaveLength(3);
+    expect(() => rooms.start('s-ana')).toThrow(expect.objectContaining({ code: 'SEATS_EMPTY' }));
+    rooms.rejoin('s-beto-2', { code: host.code, playerId: guest.playerId, token: guest.token });
+    rooms.quit('s-beto-2');
+    expect(rooms.get(host.code).seats.map((s) => s.name)).toEqual(['Ana', 'Bot']);
+  });
+
+  it('si quien creó la sala sale antes de empezar, la sala pasa a la siguiente persona', () => {
+    const { inbox, rooms, host } = openRoom();
+    rooms.quit('s-ana');
+    expect(rooms.get(host.code).hostId).toBe('p2');
+    expect(inbox['s-beto'].lobby.seats.find((s) => s.host).name).toBe('Beto');
+    expect(() => rooms.addBot('s-beto', { personality: 'honest', name: 'Otro' })).not.toThrow();
+    // Si no queda ninguna persona, la sala se cierra
+    rooms.quit('s-beto');
+    expect(rooms.get(host.code)).toBeUndefined();
+  });
+
+  it('quien entra sin nombre recibe el primer "Jugador N" libre', () => {
+    const { rooms, host } = openRoom();
+    rooms.join('s-x', { code: host.code, name: 'Jugador 4' });
+    expect(() => rooms.join('s-y', { code: host.code, name: '' })).not.toThrow();
+    expect(rooms.get(host.code).seats.at(-1).name).toBe('Jugador 5');
   });
 
   it('a cada uno le llegan solo sus dados, y nadie juega por otro asiento', () => {
@@ -71,44 +126,30 @@ describe('salas online', () => {
 
   it('con el azar de verdad del servidor la sala se crea y empieza', () => {
     const rooms = createRooms({ send: () => {} });
-    const host = rooms.create('s-ana', { setup: SETUP });
-    rooms.join('s-beto', { code: host.code });
+    const host = rooms.create('s-ana', { name: 'Ana', config: CONFIG });
+    rooms.join('s-beto', { code: host.code, name: 'Beto' });
     expect(() => rooms.start('s-ana')).not.toThrow();
     expect(rooms.get(host.code).store.get().game.phase).toBe('ROLL');
   });
 
   it('rechaza una configuración inválida', () => {
     const rooms = createRooms({ send: () => {} });
-    expect(() => rooms.create('s', { setup: { config: { mode: 'nada' }, players: SETUP.players } })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
-    const onlyBots = { ...SETUP, players: [SETUP.players[2], { ...SETUP.players[2], id: 'p2' }] };
-    expect(() => rooms.create('s', { setup: onlyBots })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
+    expect(() => rooms.create('s', { config: { mode: 'nada' } })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
+    expect(() => rooms.create('s', { config: { mode: 'penalty', penaltyText: 'x'.repeat(5000) } })).toThrow(
+      expect.objectContaining({ code: 'BAD_SETUP' }),
+    );
+    expect(() => rooms.create('s', {})).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
   });
 
   it('un doble toque en Unirse no ocupa dos asientos', () => {
-    vi.useFakeTimers();
-    const { send } = fakeSockets();
-    const rooms = createRooms({ send, rng: () => 0 });
-    const setup = { ...SETUP, players: [SETUP.players[0], { id: 'p2', name: '' }, { id: 'p3', name: '' }] };
-    const host = rooms.create('s-ana', { setup });
-    rooms.join('s-beto', { code: host.code });
-    rooms.join('s-beto', { code: host.code });
-    const taken = rooms.get(host.code).seats.filter((s) => s.socketId === 's-beto');
-    expect(taken).toHaveLength(1);
+    const { rooms, host } = openRoom();
+    rooms.join('s-cata', { code: host.code, name: 'Cata' });
+    rooms.join('s-cata', { code: host.code, name: 'Cata' });
+    expect(rooms.get(host.code).seats.filter((s) => s.socketId === 's-cata')).toHaveLength(1);
   });
 
-  it('quien soltó un asiento en la espera no puede volver a él si ya lo ocupó otro', () => {
-    const { inbox, rooms, host, guest } = openRoom();
-    rooms.disconnect('s-beto');
-    const other = rooms.join('s-cata', { code: host.code, name: 'Cata' });
-    expect(other.playerId).toBe(guest.playerId);
-    expect(other.token).not.toBe(guest.token); // token nuevo
-    expect(() => rooms.rejoin('s-beto-2', { code: host.code, playerId: guest.playerId, token: guest.token })).toThrow(
-      expect.objectContaining({ code: 'NO_ROOM' }),
-    );
-    // El asiento del anfitrión no se lo lleva nadie aunque se le corte la conexión
-    rooms.disconnect('s-ana');
-    expect(() => rooms.join('s-dani', { code: host.code })).toThrow(expect.objectContaining({ code: 'FULL' }));
-    // Si el mismo asiento se abre en otro lado, al de antes se le avisa
+  it('si el mismo asiento se abre en otro lado, al de antes se le avisa', () => {
+    const { inbox, rooms, host } = openRoom();
     rooms.rejoin('s-ana-2', { code: host.code, playerId: 'p1', token: host.token });
     rooms.rejoin('s-ana-3', { code: host.code, playerId: 'p1', token: host.token });
     expect(inbox['s-ana-2'].lost).toBe('SEAT_TAKEN');
@@ -133,12 +174,8 @@ describe('salas online', () => {
   });
 
   it('el reloj de presión lo cumple el servidor', () => {
-    vi.useFakeTimers();
-    const { inbox, send } = fakeSockets();
-    const rooms = createRooms({ send, rng: () => 0 });
-    const setup = { config: { mode: 'classic', variants: { pressureClock: { enabled: true, seconds: 5 } } }, players: SETUP.players.slice(0, 2) };
-    const host = rooms.create('s-ana', { setup });
-    rooms.join('s-beto', { code: host.code });
+    const { inbox, rooms } = openRoom({ mode: 'classic', variants: { pressureClock: { enabled: true, seconds: 5 } } });
+    rooms.removeSeat('s-ana', { seatId: 'p3' });
     rooms.start('s-ana');
     rooms.action('s-ana', { type: 'ROLL', playerId: 'p1' });
     vi.advanceTimersByTime(5100);
@@ -154,15 +191,6 @@ describe('salas online', () => {
     expect(() => rooms.action('s-beto', { type: 'NEXT_ROUND' })).toThrow(expect.objectContaining({ code: 'REVEALING' }));
     vi.advanceTimersByTime(3000);
     expect(() => rooms.action('s-beto', { type: 'NEXT_ROUND' })).not.toThrow();
-  });
-
-  it('rechaza personalidades inventadas y textos de castigo enormes', () => {
-    const rooms = createRooms({ send: () => {} });
-    const weird = { ...SETUP, players: [SETUP.players[0], { ...SETUP.players[2], personality: 'toString' }] };
-    expect(() => rooms.create('s', { setup: weird })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
-    const long = { ...SETUP, config: { mode: 'penalty', penaltyText: 'x'.repeat(5000) } };
-    expect(() => rooms.create('s', { setup: long })).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
-    expect(() => rooms.create('s', {})).toThrow(expect.objectContaining({ code: 'BAD_SETUP' }));
   });
 
   it('las reacciones llegan a toda la sala, sin inventadas ni ráfagas', () => {

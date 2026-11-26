@@ -61,10 +61,28 @@ export function draftToSetup(draft) {
   };
 }
 
-// startLabel: el texto del botón final ("Jugar", o "Crear sala" en línea).
+// El primer nombre repetido (sin mirar mayúsculas), o null: dos jugadores no pueden llamarse
+// igual, porque en las tarjetas y en los mensajes no se sabría de quién se habla
+export function duplicateName(players) {
+  const seen = new Set();
+  for (const { name } of players) {
+    const key = name.toLowerCase();
+    if (seen.has(key)) return name;
+    seen.add(key);
+  }
+  return null;
+}
+
 // settings: la pantalla de Configuración en vez de la de nueva partida.
-export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start'), settings = false }) {
+export function RulesPanel({ draft, onBack, onStart, settings = false }) {
   const root = h('main', { class: 'screen setup' });
+  let repeated = null;
+  const start = () => {
+    const setup = draftToSetup(draft);
+    repeated = duplicateName(setup.players);
+    if (repeated) render();
+    else onStart(setup);
+  };
   const update = (fn) => {
     fn(draft);
     if (settings) setPreference('variants', draft.variants);
@@ -89,51 +107,25 @@ export function RulesPanel({ draft, onBack, onStart, startLabel = t('setup.start
             draft.mode === 'lives' && livesCard(),
             draft.mode === 'penalty' && penaltyCard(),
             scenarioCard(),
-            h('p', { class: 'setup__note' }, t('setup.extras', { list: activeVariants() })),
+            h('p', { class: 'setup__note' }, extrasNote(draft.variants)),
           ),
       h(
         'footer',
         { class: 'setup__footer' },
+        repeated && h('p', { class: 'online__error', role: 'alert' }, t('setup.duplicateName', { name: repeated })),
         settings
           ? h('button', { class: 'btn btn--primary btn--big', onClick: onBack }, t('settings.done'))
-          : h('button', { class: 'btn btn--primary btn--big', onClick: () => onStart(draftToSetup(draft)) }, startLabel),
+          : h('button', { class: 'btn btn--primary btn--big', onClick: start }, t('setup.start')),
       ),
     );
-  }
-
-  // Las reglas extra no se eligen aquí, pero se nombran para que nadie se sorprenda en la mesa
-  function activeVariants() {
-    const names = VARIANTS.filter((v) => draft.variants[v.id].enabled).map((v) => t(`variants.${v.id}.name`));
-    return names.length ? names.join(', ') : t('setup.extras.none');
   }
 
   function modeCard() {
-    return card(t('setup.mode'), segmented('setup.mode', Object.keys(MODES), 'mode', 'mode'));
+    return card(t('setup.mode'), segmented('setup.mode', Object.keys(MODES), draft.mode, 'mode', (v) => update((d) => (d.mode = v))));
   }
 
   function scenarioCard() {
-    return card(t('setup.scenario'), segmented('setup.scenario', SCENARIOS, 'scenario', 'scenario'));
-  }
-
-  // Botones de elegir uno solo: `field` es la clave del borrador y `prefix` la de sus textos
-  function segmented(label, options, field, prefix) {
-    return h(
-      'div',
-      { class: 'segmented', role: 'radiogroup', 'aria-label': t(label) },
-      options.map((option) =>
-        h(
-          'button',
-          {
-            class: `segmented__option${draft[field] === option ? ' is-selected' : ''}`,
-            role: 'radio',
-            'aria-checked': String(draft[field] === option),
-            onClick: () => update((d) => (d[field] = option)),
-          },
-          h('strong', {}, t(`${prefix}.${option}`)),
-          h('small', {}, t(`${prefix}.${option}.hint`)),
-        ),
-      ),
-    );
+    return card(t('setup.scenario'), segmented('setup.scenario', SCENARIOS, draft.scenario, 'scenario', (v) => update((d) => (d.scenario = v))));
   }
 
   function playersCard() {
@@ -306,7 +298,35 @@ export function card(title, ...children) {
   return h('section', { class: 'card' }, h('h2', { class: 'card__title' }, title), ...children);
 }
 
-function stepper({ value, min, max, step = 1, onChange }) {
+// Las reglas extra no se eligen en la nueva partida ni en la sala, pero se nombran para que
+// nadie se sorprenda en la mesa
+export function extrasNote(variants) {
+  const names = VARIANTS.filter((v) => variants[v.id]?.enabled).map((v) => t(`variants.${v.id}.name`));
+  return t('setup.extras', { list: names.length ? names.join(', ') : t('setup.extras.none') });
+}
+
+// Botones de elegir uno solo: `prefix` es la clave de sus textos (`mode.classic`, `.hint`)
+export function segmented(label, options, value, prefix, onChange) {
+  return h(
+    'div',
+    { class: 'segmented', role: 'radiogroup', 'aria-label': t(label) },
+    options.map((option) =>
+      h(
+        'button',
+        {
+          class: `segmented__option${value === option ? ' is-selected' : ''}`,
+          role: 'radio',
+          'aria-checked': String(value === option),
+          onClick: () => onChange(option),
+        },
+        h('strong', {}, t(`${prefix}.${option}`)),
+        h('small', {}, t(`${prefix}.${option}.hint`)),
+      ),
+    ),
+  );
+}
+
+export function stepper({ value, min, max, step = 1, onChange }) {
   const clamp = (n) => Math.min(max, Math.max(min, n));
   return h(
     'div',
