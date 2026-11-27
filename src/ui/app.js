@@ -1,6 +1,7 @@
 // Enrutador de la capa HTML: menú → configuración → partida.
 import { playSfx, setMusic } from '../app/audio.js';
 import { needsPassScreen } from '../app/gameStore.js';
+import { momentSounds } from '../app/gameSounds.js';
 import { momentViewer, roundMoment } from '../app/moment.js';
 import { createOnline } from '../app/online.js';
 import { getPreference } from '../app/preferences.js';
@@ -101,7 +102,8 @@ export function mountApp(root, store, stage) {
     }
     if (!before?.game || resultShown(before)) return;
     moment?.close();
-    moment = showRoundMoment(roundMoment(snapshot.game, momentViewer(snapshot)), snapshot.game.config.mode);
+    const { game } = snapshot;
+    moment = showRoundMoment(roundMoment(game, momentViewer(snapshot)), game.config.mode, momentSounds(game));
   }
 
   // Fundidos desde negro. Van fuera de root porque redibujar los borraría a media animación.

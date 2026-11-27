@@ -1606,20 +1606,31 @@ p {
   fill: var(--color-letra-pendiente);
 }
 
-/* Tiembla, se parte por la mitad y cada mitad cae por su lado */
+/* Recibe el golpe (se aplasta, destella y se sacude, con un anillo de impacto), se parte por
+   la mitad y cada mitad cae por su lado. --golpe lo pone RoundMoment.js: es cuando suena */
 .heart.is-breaking {
-  animation: moment-shake 0.4s 0.35s ease-in-out;
+  animation: heart-hit 0.45s calc(var(--golpe) - 0.07s) ease-out;
+}
+
+.heart.is-breaking::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border: 3px solid var(--color-retablo-dorado);
+  border-radius: 50%;
+  opacity: 0;
+  animation: heart-impact 0.4s var(--golpe) ease-out;
 }
 
 .heart.is-breaking .heart__half--l {
-  animation: heart-fall-l 0.8s 0.8s ease-in forwards;
+  animation: heart-fall-l 0.8s calc(var(--golpe) + 0.35s) ease-in forwards;
 }
 
 .heart.is-breaking .heart__half--r {
-  animation: heart-fall-r 0.8s 0.8s ease-in forwards;
+  animation: heart-fall-r 0.8s calc(var(--golpe) + 0.35s) ease-in forwards;
 }
 
-/* Letras de QUISPE: la recién perdida cae como un sello */
+/* Letras de QUISPE: la recién perdida cae como un sello, justo con el golpe */
 .moment__letters {
   display: flex;
   gap: 0.3rem;
@@ -1644,7 +1655,7 @@ p {
 }
 
 .moment__letter.is-new {
-  animation: letter-stamp 0.45s 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  animation: letter-stamp 0.45s calc(var(--golpe) - 0.16s) cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
 }
 
 @keyframes moment-in {
@@ -1692,6 +1703,33 @@ p {
   }
 }
 
+@keyframes heart-hit {
+  15% {
+    transform: scale(1.35, 0.65) rotate(-8deg);
+    filter: brightness(2.6);
+  }
+  35% {
+    transform: scale(0.88, 1.12) translateX(4px) rotate(6deg);
+  }
+  55% {
+    transform: translateX(-5px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes heart-impact {
+  from {
+    opacity: 1;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
 @keyframes heart-fall-l {
   to {
     opacity: 0;
@@ -1727,6 +1765,10 @@ p {
 
   .heart.is-breaking .heart__half--l,
   .heart.is-breaking .heart__half--r {
-    animation: moment-out 0.5s 0.6s forwards;
+    animation: moment-out 0.5s var(--golpe) forwards;
+  }
+
+  .heart.is-breaking::after {
+    content: none;
   }
 }

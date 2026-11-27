@@ -16,3 +16,5 @@ convert() { # origen inicio fin destino
 
 convert "$M/musica-menu - Cantina de Noche (Suno, 70 bpm).mp3" 0 183.5 musica-menu
 convert "$M/musica-partida - Gran Quispe (ElevenLabs, 70 bpm).mp3" 2.7 121.57 musica-partida
+# Suena al ganar la partida (pedido de Flavio, 2026-11-26)
+convert "$M/cumbia del ganador Gran Quispe.mp3" 0 88.96 musica-ganador

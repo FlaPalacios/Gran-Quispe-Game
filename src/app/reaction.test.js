@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame } from '../engine/rules.js';
-import { roundReaction, roundVoice } from './reaction.js';
+import { roundReaction, roundSounds, roundVoice } from './reaction.js';
 
 // rng que devuelve los valores en orden; para un dado d se usa (d - 1) / 6
 const dieValue = (d) => (d - 1) / 6;
@@ -35,7 +35,6 @@ describe('roundReaction', () => {
     expect(roundReaction(over, { revealing: true })).toEqual({
       playerId: 'beto',
       pose: 'neutral',
-      sound: null,
     });
     // Y al terminar, la reacción de siempre
     expect(roundReaction(over).pose).toBe('caught');
@@ -46,7 +45,6 @@ describe('roundReaction', () => {
     expect(roundReaction(act(called, 'DOUBT', 'beto'))).toEqual({
       playerId: 'ana',
       pose: 'caught',
-      sound: 'caught',
     });
   });
 
@@ -56,27 +54,26 @@ describe('roundReaction', () => {
     expect(roundReaction(act(called, 'DOUBT', 'beto'))).toEqual({
       playerId: 'ana',
       pose: 'gloating',
-      sound: 'loss',
     });
   });
 
-  it('creer un Quispe deja al que creyó con cara de derrota y su risa', () => {
+  it('creer un Quispe deja al que creyó con cara de derrota', () => {
     const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 21);
     const over = act(called, 'BELIEVE', 'beto');
-    expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'caught', sound: 'loss' });
+    expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'caught' });
   });
 
-  it('en una Cholada se queda el perdedor y no hay remate: ya sonó la Cholada', () => {
+  it('en una Cholada se queda el perdedor', () => {
     const called = act(roll(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 62);
     const cholada = act(roll(act(called, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 54);
-    expect(roundReaction(cholada)).toEqual({ playerId: 'beto', pose: 'caught', sound: null });
+    expect(roundReaction(cholada)).toEqual({ playerId: 'beto', pose: 'caught' });
   });
 
   it('quedar eliminado manda sobre el resultado de la ronda', () => {
     const start = newGame({ mode: 'lives', lives: 1 });
     const called = act(roll(start, 'ana', [3, 1]), 'CALL', 'ana', 65);
     const out = act(called, 'DOUBT', 'beto');
-    expect(roundReaction(out)).toEqual({ playerId: 'ana', pose: 'caught', sound: 'eliminated' });
+    expect(roundReaction(out)).toEqual({ playerId: 'ana', pose: 'caught' });
   });
 
   it('ganar la partida manda sobre todo: se queda el ganador, riéndose', () => {
@@ -84,7 +81,7 @@ describe('roundReaction', () => {
     const called = act(roll(start, 'ana', [3, 1]), 'CALL', 'ana', 65);
     const over = act(called, 'DOUBT', 'beto');
     expect(over.winnerId).toBe('beto');
-    expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'gloating', sound: 'win' });
+    expect(roundReaction(over)).toEqual({ playerId: 'beto', pose: 'gloating' });
   });
 });
 
@@ -109,5 +106,26 @@ describe('roundVoice', () => {
     const duel = newGame({ mode: 'lives', lives: 1 }, PLAYERS.slice(0, 2));
     const won = act(act(roll(duel, 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
     expect(roundVoice(won)).toBe(null);
+  });
+});
+
+describe('roundSounds', () => {
+  const called = (dice, call, config) => act(roll(newGame(config), 'ana', dice), 'CALL', 'ana', call);
+
+  it('el título suena según cómo terminó la ronda; el golpe, al perder', () => {
+    expect(roundSounds(called([4, 3], 43))).toBe(null);
+    expect(roundSounds(act(called([3, 1], 65), 'DOUBT', 'beto'))).toEqual({ headline: 'caught', hit: 'lossHit' });
+    expect(roundSounds(act(called([6, 5], 65), 'DOUBT', 'beto'))).toEqual({ headline: 'wrongDoubt', hit: 'lossHit' });
+    expect(roundSounds(act(called([3, 1], 21), 'BELIEVE', 'beto'))).toEqual({ headline: null, hit: 'lossHit' });
+    const s = act(roll(act(called([4, 2], 62), 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
+    expect(roundSounds(s).headline).toBe('cholada');
+  });
+
+  it('en el modo castigo suena el castigo y nadie dice su frase; quedar fuera manda', () => {
+    const penalty = act(called([3, 1], 65, { mode: 'penalty', penaltyText: 'Un trago' }), 'DOUBT', 'beto');
+    expect(roundSounds(penalty)).toEqual({ headline: 'caught', hit: 'penalty' });
+    expect(roundVoice(penalty)).toBe(null);
+    const out = act(called([3, 1], 65, { mode: 'lives', lives: 1 }), 'DOUBT', 'beto');
+    expect(roundSounds(out).hit).toBe('eliminated');
   });
 });

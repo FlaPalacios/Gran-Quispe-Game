@@ -20,6 +20,14 @@ export const SFX = Object.freeze({
   eliminated: { file: 'sfx-eliminado', volume: 0.7 },
   // El brindis es el remate de ganar la partida
   cheer: { file: 'sfx-cerveza-ganar', volume: 0.8 },
+  // Los del momento de fin de ronda ya vienen nivelados al volumen de las voces
+  // (recursos-fv/scripts/convertir-momentos.py)
+  caught: { file: 'sfx-mentiste-mal', volume: 1 },
+  wrongDoubt: { file: 'sfx-te-equivocaste', volume: 1 },
+  wrongDoubtSlap: { file: 'sfx-te-equivocaste-golpe', volume: 1 },
+  cholada: { file: 'sfx-cholada', volume: 1 },
+  lossHit: { file: 'sfx-perder-vida', volume: 1 },
+  penalty: { file: 'sfx-tomaaas', volume: 1 },
 });
 
 // Efectos y música en audio/; las voces de los personajes, en audio/voces/
@@ -179,16 +187,19 @@ function decodeVoices() {
   }
 }
 
-// Cuánto dura un efecto, en milisegundos, para que la interfaz pueda esperar a que termine.
-// Devuelve null si todavía no se sabe: quien pregunte debe tener su propio plazo de respaldo.
-export function sfxDuration(key) {
-  const sfx = SFX[key];
-  if (!sfx) return null;
-  const buffer = buffers.get(sfx.file);
+// Cuánto dura un efecto o una voz, en milisegundos, para esperar a que termine antes del
+// siguiente. Devuelve null si todavía no se sabe: quien pregunte pone su propio plazo.
+function durationOf(file) {
+  const buffer = buffers.get(file);
   if (buffer) return buffer.duration * 1000;
-  const seconds = elements.get(sfx.file)?.duration;
+  const seconds = elements.get(file)?.duration;
   return Number.isFinite(seconds) ? seconds * 1000 : null;
 }
+
+export const sfxDuration = (key) => (SFX[key] ? durationOf(SFX[key].file) : null);
+// Una voz que no va a sonar (voces apagadas o sin grabar) dura 0: nadie la espera
+export const voiceDuration = (characterIndex, key) =>
+  hasVoice(characterIndex, key) ? durationOf(voiceFile(characterIndex, key)) : 0;
 
 export const isMuted = () => getPreference('muted');
 
@@ -205,15 +216,36 @@ export function setMuted(value) {
 export const MUSIC = Object.freeze({
   menu: { file: 'musica-menu', volume: 0.3 },
   game: { file: 'musica-partida', volume: 0.22 },
+  // La cumbia del ganador suena más fuerte: ya no hay voces ni efectos que tapar
+  winner: { file: 'musica-ganador', volume: 0.3 },
 });
 
 let music = null;
 let musicFile = null;
 let track = null;
+// La pista que pide un momento del juego (la cumbia del ganador) manda sobre la de la pantalla
+let override = null;
+let hushTimer = null;
 
 // La pista que corresponde a la pantalla: 'menu', 'game' o null para ninguna
 export function setMusic(key) {
   track = key;
+  syncMusic();
+}
+
+export function setMusicOverride(key) {
+  if (override === key) return;
+  override = key;
+  syncMusic();
+}
+
+// Calla la música mientras suena algo que la necesita sola ("¡Tomaaas!") y la retoma donde iba
+export function hushMusic(ms) {
+  clearTimeout(hushTimer);
+  hushTimer = setTimeout(() => {
+    hushTimer = null;
+    syncMusic();
+  }, ms);
   syncMusic();
 }
 
@@ -225,8 +257,8 @@ export function setMusicOn(value) {
 // Suena si hay pista, ni el sonido ni la música están apagados y la pestaña está a la vista
 // (en el celular, un <audio> sigue sonando con la pantalla en otra app si no se pausa)
 function syncMusic() {
-  const wanted = MUSIC[track];
-  const audible = wanted && extension && !isMuted() && getPreference('music') && document.visibilityState !== 'hidden';
+  const wanted = MUSIC[override ?? track];
+  const audible = wanted && !hushTimer && extension && !isMuted() && getPreference('music') && document.visibilityState !== 'hidden';
   if (!audible) {
     music?.pause();
     return;

@@ -3,16 +3,22 @@
 // que se le rompe o la letra de QUISPE que se le marca. Si quedó fuera o terminó la partida,
 // un mensaje más. Qué se cuenta lo decide src/app/moment.js; aquí solo se dibuja y se anima.
 // Va fuera del HUD (en el body), porque cada redibujo lo borraría a media animación. Un toque
-// pasa al siguiente mensaje; el último, lo cierra.
+// pasa al siguiente mensaje; el último, lo cierra. Cada mensaje dura al menos lo que tardan sus
+// sonidos (momentSounds de src/app/gameSounds.js), para que no se pisen con los del siguiente.
 import { avatarFor } from '../app/characters.js';
 import { LETTERS } from '../engine/modes.js';
 import { hasText, t } from '../i18n/index.js';
 import { h } from './dom.js';
 import { lossUnit } from './format.js';
 
-// Lo que dura cada mensaje en pantalla si nadie toca
+// Lo que dura cada mensaje en pantalla si nadie toca y sus sonidos no piden más
 const BEAT_MS = { headline: 1900, loss: 2100, win: 2600 };
+// Respiro entre el último sonido de un mensaje y el siguiente mensaje
+const AFTER_SOUND_MS = 250;
 const LEAVE_MS = 250;
+// Cuándo cae el golpe sobre el corazón o la letra recién perdida: lo usan la animación (CSS,
+// variable --golpe) y el sonido, para que caigan juntos
+const HIT_MS = 720;
 
 // Corazón en SVG partido en dos mitades, para que al perderlo cada una caiga por su lado.
 // shortcut: dibujado en código; si Flavio hace sus imágenes del corazón, van aquí.
@@ -71,7 +77,7 @@ function lossBeat(loss, mode) {
   const avatar = avatarFor(loss.playerIndex);
   return h(
     'div',
-    { class: `moment__beat moment__loss${loss.eliminated ? ' is-out' : ''}` },
+    { class: `moment__beat moment__loss${loss.eliminated ? ' is-out' : ''}`, style: `--golpe: ${HIT_MS}ms` },
     avatar && h('img', { class: 'moment__avatar', src: avatar, alt: '', width: '96', height: '96' }),
     h('p', { class: 'moment__name' }, loss.name),
     lossMarks(loss),
@@ -93,12 +99,13 @@ function winBeat(win) {
   );
 }
 
-// Muestra el momento y devuelve { close } para cerrarlo si la partida sigue antes de tiempo
-export function showRoundMoment(moment, mode) {
+// Muestra el momento y devuelve { close } para cerrarlo si la partida sigue antes de tiempo.
+// `sounds` (opcional) es el de momentSounds: se le avisa cada mensaje y dice cuánto suena.
+export function showRoundMoment(moment, mode, sounds = null) {
   const beats = [
-    [headlineBeat(moment.headline), BEAT_MS.headline],
-    [lossBeat(moment.loss, mode), BEAT_MS.loss],
-    moment.win && [winBeat(moment.win), BEAT_MS.win],
+    ['headline', headlineBeat(moment.headline)],
+    ['loss', lossBeat(moment.loss, mode)],
+    moment.win && ['win', winBeat(moment.win)],
   ].filter(Boolean);
 
   const overlay = h('div', { class: 'moment', role: 'status', 'aria-live': 'assertive' });
@@ -110,15 +117,17 @@ export function showRoundMoment(moment, mode) {
     clearTimeout(timer);
     index += 1;
     if (index >= beats.length) return close();
-    const [beat, ms] = beats[index];
+    const [name, beat] = beats[index];
     overlay.replaceChildren(beat);
-    timer = setTimeout(next, ms);
+    const soundMs = sounds?.[name](HIT_MS) ?? 0;
+    timer = setTimeout(next, Math.max(BEAT_MS[name], soundMs + AFTER_SOUND_MS));
   }
 
   function close() {
     if (closed) return;
     closed = true;
     clearTimeout(timer);
+    sounds?.stop();
     overlay.classList.add('is-leaving');
     setTimeout(() => overlay.remove(), LEAVE_MS);
   }

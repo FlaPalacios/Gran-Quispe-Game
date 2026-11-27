@@ -24,7 +24,7 @@ Los PNG originales de los personajes, avatares y objetos están en `recursos-fv/
 
 ## Sonidos
 
-Quitados del juego por pedido de Flavio (los archivos están en `recursos-fv/papelera/sonidos-quitados/`): `sfx-destapar`, `sfx-gana-partida`, `sfx-cholada` y las tres risas. Sus filas siguen abajo como registro.
+Quitados del juego por pedido de Flavio (los archivos están en `recursos-fv/papelera/sonidos-quitados/`): `sfx-destapar`, `sfx-gana-partida`, la risa de la Cholada (el nombre `sfx-cholada` ahora lo lleva el pedo) y las tres risas. Sus filas siguen abajo como registro.
 
 Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 
@@ -43,6 +43,7 @@ Todos en `src/assets/audio/`, en OGG y MP3, normalizados de volumen.
 | `sfx-cerveza-ganar` | Grabado por Flavio: "Sonido Cerveza ganar" | Propio |
 | `sfx-gana-partida` | Grabado por Flavio: "Sonido de Ganar" | Propio |
 | `sfx-eliminado` | Grabado por Flavio: "Sonido de Perder" | Propio |
+| `sfx-mentiste-mal`, `sfx-te-equivocaste`, `sfx-te-equivocaste-golpe`, `sfx-cholada` (el pedo), `sfx-perder-vida`, `sfx-tomaaas` | Conseguidos por Flavio (2026-11-26); varios son audios de memes sacados de videos | Sin confirmar: revisar antes de publicar o aceptar donaciones |
 
 Kenney (www.kenney.nl) no exige crédito, pero lo agradece: se puede nombrar en la pantalla de créditos.
 
@@ -50,6 +51,8 @@ Los de Kenney y BigSoundBank conservan su OGG original (no se recodifica para no
 calidad) y su MP3 se sacó de ahí. Los de Flavio salen de `recursos-fv/sonidos/efectos-grabados/` con
 `recursos-fv/scripts/convertir-sonidos.py`, que los normaliza y genera el OGG (Opus) y el MP3.
 Cuál suena más fuerte que cuál se ajusta en la tabla `SFX` de `src/app/audio.js`, no en el archivo.
+Los del final de ronda (desde "mentiste mal" hasta "tomaaas") salen de la misma carpeta con
+`recursos-fv/scripts/convertir-momentos.py`, que los recorta y los nivela en sonoridad (LUFS).
 
 Los que fueron reemplazados quedan en `recursos-fv/papelera/sonidos-alternativos/` (destapar, cholada,
 descubierto, pierde-ronda, eliminado y gana-partida, todos con sufijo `-A`), y las otras opciones que no
@@ -79,6 +82,7 @@ para que el bucle no tenga hueco. El volumen de cada pista va en la tabla `MUSIC
 | --- | --- | --- |
 | `musica-menu` | "Cantina de Noche", hecha por Flavio con Suno (70 bpm) | Según el plan de Suno con que se generó: revisar antes de publicar o aceptar donaciones |
 | `musica-partida` | Hecha por Flavio con ElevenLabs Music (70 bpm) | Según el plan de ElevenLabs: revisar antes de publicar o aceptar donaciones |
+| `musica-ganador` | "Cumbia del ganador Gran Quispe", conseguida por Flavio | Según la herramienta con que se generó: revisar antes de publicar o aceptar donaciones |
 
 ## Íconos de contacto
 

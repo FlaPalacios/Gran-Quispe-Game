@@ -1,10 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyAction, createGame } from '../engine/rules.js';
-import { connectGameSounds } from './gameSounds.js';
-import { playSfx, playVoice } from './audio.js';
+import { connectGameSounds, momentSounds } from './gameSounds.js';
+import { hushMusic, playSfx, playVoice, setMusicOverride } from './audio.js';
 
-// El audio de verdad necesita navegador: aquí solo interesa qué se pide y cuándo
-vi.mock('./audio.js', () => ({ playSfx: vi.fn(), playVoice: vi.fn(), preloadVoices: vi.fn() }));
+// El audio de verdad necesita navegador: aquí solo interesa qué se pide y cuándo. Todo efecto
+// dura 500 ms y toda frase, 1 s.
+vi.mock('./audio.js', () => ({
+  playSfx: vi.fn(),
+  playVoice: vi.fn(),
+  preloadVoices: vi.fn(),
+  setMusicOverride: vi.fn(),
+  hushMusic: vi.fn(),
+  sfxDuration: () => 500,
+  voiceDuration: () => 1000,
+}));
 
 const dieValue = (d) => (d - 1) / 6;
 const rngFrom = (...values) => () => values.shift() ?? 0;
@@ -66,95 +75,21 @@ describe('connectGameSounds', () => {
     expect(sounds()).toEqual(['start']);
   });
 
-  it('mientras se destapa no suena nada: el remate espera', () => {
-    const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
-    store.emit({ game: called });
-    playSfx.mockClear();
-    store.emit({ game: act(called, 'DOUBT', 'beto'), revealing: true });
-    expect(sounds()).toEqual([]);
-  });
-
-  it('al terminar el destape no suena ninguna risa: habla quien pilló al mentiroso', () => {
+  it('el final de ronda no suena aquí: suena con los mensajes (momentSounds)', () => {
     const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 65);
     const over = act(called, 'DOUBT', 'beto');
     store.emit({ game: called });
-    store.emit({ game: over, revealing: true });
     playSfx.mockClear();
     playVoice.mockClear();
+    store.emit({ game: over, revealing: true });
     store.emit({ game: over, revealing: false });
     expect(sounds()).toEqual([]);
-    expect(voices()).toEqual([[1, 'pille']]);
+    expect(voices()).toEqual([[1, 'desconfio']]);
   });
 
-  it('una Cholada no tiene efecto: la dice el personaje, y se cancela si la partida sigue', () => {
-    vi.useFakeTimers();
-    try {
-      let s = act(roll(newGame(), 'ana', [4, 2]), 'CALL', 'ana', 62);
-      store.emit({ game: s });
-      s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31); // más bajo
-      playSfx.mockClear();
-      playVoice.mockClear();
-      store.emit({ game: s });
-      vi.advanceTimersByTime(500);
-      expect(sounds()).toEqual([]);
-      expect(voices()).toEqual([[1, 'cholada']]);
-
-      playVoice.mockClear();
-      store.emit({ game: s });
-      store.emit({ game: act(s, 'NEXT_ROUND') });
-      vi.advanceTimersByTime(1000);
-      expect(voices()).toEqual([]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('si la Cholada deja a alguien fuera, suena solo el de quedar fuera', () => {
-    vi.useFakeTimers();
-    try {
-      const start = createGame({ config: { mode: 'lives', lives: 1 }, players: PLAYERS }, { rng: rngFrom(0) });
-      let s = act(roll(start, 'ana', [4, 2]), 'CALL', 'ana', 62);
-      store.emit({ game: s });
-      playSfx.mockClear();
-      playVoice.mockClear();
-      s = act(roll(act(s, 'BELIEVE', 'beto'), 'beto', [4, 2]), 'CALL', 'beto', 31);
-      store.emit({ game: s });
-      vi.advanceTimersByTime(500);
-      expect(sounds()).toEqual(['eliminated']);
-      expect(voices().filter(([, key]) => key !== '62' && key !== 'creo')).toEqual([]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('creer un Quispe no suena a Cholada: lo lamenta quien creyó', () => {
-    vi.useFakeTimers();
-    try {
-      const called = act(roll(newGame(), 'ana', [3, 1]), 'CALL', 'ana', 21);
-      store.emit({ game: called });
-      playSfx.mockClear();
-      playVoice.mockClear();
-      store.emit({ game: act(called, 'BELIEVE', 'beto') });
-      vi.advanceTimersByTime(500);
-      expect(sounds()).toEqual([]);
-      expect(voices()).toEqual([[1, 'pierdo']]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it('al ganar la partida suena solo el brindis', () => {
-    const start = createGame(
-      { config: { mode: 'lives', lives: 1 }, players: PLAYERS.slice(0, 2) },
-      { rng: rngFrom(0) },
-    );
-    const called = act(roll(start, 'ana', [3, 1]), 'CALL', 'ana', 65);
-    const over = act(called, 'DOUBT', 'beto');
-    store.emit({ game: called });
-    store.emit({ game: over, revealing: true });
-    playSfx.mockClear();
-    store.emit({ game: over, revealing: false });
-    expect(sounds()).toEqual(['cheer']);
+  it('la cumbia del ganador se apaga al salir de la partida terminada', () => {
+    store.emit({ game: newGame() });
+    expect(setMusicOverride).toHaveBeenLastCalledWith(null);
   });
 
   it('cada sacudida suena, pero no más rápido que el propio sonido', () => {
@@ -197,5 +132,76 @@ describe('connectGameSounds', () => {
         [1, 'desconfio'],
       ]);
     });
+
+    it('en el modo castigo solo cantan las jugadas', () => {
+      const called = act(roll(newGame({ mode: 'penalty', penaltyText: 'Un trago' }), 'ana', [3, 1]), 'CALL', 'ana', 65);
+      store.emit({ game: roll(newGame({ mode: 'penalty', penaltyText: 'Un trago' }), 'ana', [3, 1]) });
+      store.emit({ game: called });
+      store.emit({ game: act(called, 'BELIEVE', 'beto') });
+      store.emit({ game: called });
+      store.emit({ game: act(called, 'DOUBT', 'beto'), revealing: true });
+      expect(voices()).toEqual([[0, '65']]);
+    });
+  });
+});
+
+describe('momentSounds', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const doubted = (dice, config) => act(act(roll(newGame(config), 'ana', dice), 'CALL', 'ana', 65), 'DOUBT', 'beto');
+
+  it('el efecto entra con el título y la frase espera a que termine', () => {
+    const moment = momentSounds(doubted([3, 1]));
+    // 500 del efecto + 150 de respiro + 1000 de la frase
+    expect(moment.headline()).toBe(1650);
+    expect(sounds()).toEqual(['caught']);
+    vi.advanceTimersByTime(649);
+    expect(voices()).toEqual([]);
+    vi.advanceTimersByTime(1);
+    expect(voices()).toEqual([[1, 'pille']]);
+  });
+
+  it('"te equivocaste" va turnando sus dos grabaciones', () => {
+    momentSounds(doubted([6, 5])).headline();
+    momentSounds(doubted([6, 5])).headline();
+    expect(new Set(sounds())).toEqual(new Set(['wrongDoubt', 'wrongDoubtSlap']));
+  });
+
+  it('el golpe suena cuando cae sobre el corazón, y pasar de mensaje cancela lo pendiente', () => {
+    const moment = momentSounds(doubted([3, 1], { mode: 'lives', lives: 3 }));
+    moment.headline();
+    expect(moment.loss(700)).toBe(1200);
+    vi.advanceTimersByTime(2000);
+    expect(sounds()).toEqual(['caught', 'lossHit']);
+    expect(voices()).toEqual([]); // la frase se canceló al pasar al mensaje del golpe
+  });
+
+  it('en el modo castigo suena "¡Tomaaas!" con la música callada, y nadie dice su frase', () => {
+    const moment = momentSounds(doubted([3, 1], { mode: 'penalty', penaltyText: 'Un trago' }));
+    expect(moment.headline()).toBe(500);
+    moment.loss(700);
+    vi.advanceTimersByTime(700);
+    expect(sounds()).toEqual(['caught', 'penalty']);
+    expect(hushMusic).toHaveBeenCalledWith(500);
+    vi.advanceTimersByTime(2000);
+    expect(voices()).toEqual([]);
+  });
+
+  it('al ganar entra la cumbia y después la cerveza, aunque se cierre el mensaje', () => {
+    const start = createGame({ config: { mode: 'lives', lives: 1 }, players: PLAYERS.slice(0, 2) }, { rng: rngFrom(0) });
+    const won = act(act(roll(start, 'ana', [3, 1]), 'CALL', 'ana', 65), 'DOUBT', 'beto');
+    const moment = momentSounds(won);
+    moment.loss(0);
+    vi.advanceTimersByTime(0);
+    expect(sounds()).toEqual(['eliminated']);
+    moment.win();
+    moment.stop();
+    expect(setMusicOverride).toHaveBeenCalledWith('winner');
+    vi.advanceTimersByTime(1000);
+    expect(sounds()).toEqual(['eliminated', 'cheer']);
   });
 });
